@@ -61,8 +61,8 @@ extern adhoc_t  adhocs[];
     tgt = (p + s *  (tot_scnt / SUPP_PER_PART +  \
 	(long) ((p - 1) / tot_scnt))) % tot_scnt + 1; \
     }
-#define V_STR(avg, sd, tgt)  a_rnd((int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd, tgt)
-#define TEXT(avg, sd, tgt)  dbg_text(tgt, (int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd)
+#define V_STR(avg, sd, tgt, numtuples)  a_rnd((int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd, tgt, numtuples)
+#define TEXT(avg, sd, tgt, numtuples, sd_len)  dbg_text(tgt, (int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd, numtuples, sd_len)
 static void gen_phone PROTO((DSS_HUGE ind, char *target, long seed));
 
 DSS_HUGE
@@ -78,14 +78,14 @@ rpb_routine(DSS_HUGE p)
 }
 
 static void
-gen_phone(DSS_HUGE ind, char *target, long seed)
+gen_phone(DSS_HUGE ind, char *target, long seed, DSS_HUGE numtuples)
 {
 	DSS_HUGE        acode, exchg, number;
 
-	RANDOM(acode, 100, 999, seed);
-	RANDOM(exchg, 100, 999, seed);
-	RANDOM(number, 1000, 9999, seed);
-
+	RANDOM(acode, 100, 999, seed, numtuples);
+	RANDOM(exchg, 100, 999, seed, numtuples);
+	// ZipfInt cannot change nHigh and nLow per seed
+	RANDOM_unif(number, (DSS_HUGE)1000, (DSS_HUGE)9999, (long)seed);
 	sprintf(target, "%02d", (int) (10 + (ind % NATIONS_MAX)));
 	sprintf(target + 3, "%03d", (int) acode);
 	sprintf(target + 7, "%03d", (int) exchg);
@@ -103,6 +103,7 @@ mk_cust(DSS_HUGE n_cust, customer_t * c)
 	DSS_HUGE        i;
 	static int      bInit = 0;
 	static char     szFormat[100];
+	DSS_HUGE num_cust_rows = O_CKEY_MAX;
 
 	if (!bInit)
 	{
@@ -111,14 +112,14 @@ mk_cust(DSS_HUGE n_cust, customer_t * c)
 	}
 	c->custkey = n_cust;
 	sprintf(c->name, szFormat, C_NAME_TAG, n_cust);
-	V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
+	V_STR(C_ADDR_LEN, C_ADDR_SD, c->address, num_cust_rows);
 	c->alen = (int)strlen(c->address);
-	RANDOM(i, 0, (nations.count - 1), C_NTRG_SD);
+	RANDOM(i, 0, (nations.count - 1), C_NTRG_SD, num_cust_rows);
 	c->nation_code = i;
-	gen_phone(i, c->phone, (long) C_PHNE_SD);
-	RANDOM(c->acctbal, C_ABAL_MIN, C_ABAL_MAX, C_ABAL_SD);
-	pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
-	TEXT(C_CMNT_LEN, C_CMNT_SD, c->comment);
+	gen_phone(i, c->phone, (long) C_PHNE_SD, num_cust_rows);
+	RANDOM(c->acctbal, C_ABAL_MIN, C_ABAL_MAX, C_ABAL_SD, num_cust_rows);
+	pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment, num_cust_rows);
+	TEXT(C_CMNT_LEN, C_CMNT_SD, c->comment, num_cust_rows, C_CMNT_SD_LEN);
 	c->clen = (int)strlen(c->comment);
 
 	return (0);
@@ -164,6 +165,9 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 	static int      bInit = 0;
 	static char     szFormat[100];
 
+	DSS_HUGE num_order_rows = (tdefs[ORDER].base * scale);
+	DSS_HUGE num_lineitem_rows = (tdefs[ORDER].base * scale * ((O_LCNT_MIN + O_LCNT_MAX) / 2));
+
 	if (!bInit)
 	{
 		sprintf(szFormat, O_CLRK_FMT, 9, HUGE_FORMAT + 1);
@@ -176,7 +180,7 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 	if (scale >= 30000)
 		RANDOM64(o->custkey, O_CKEY_MIN, O_CKEY_MAX, O_CKEY_SD);
 	else
-		RANDOM(o->custkey, O_CKEY_MIN, O_CKEY_MAX, O_CKEY_SD);
+		RANDOM(o->custkey, O_CKEY_MIN, O_CKEY_MAX, O_CKEY_SD, num_order_rows);
 	while (o->custkey % CUST_MORTALITY == 0)
 	{
 		o->custkey += delta;
@@ -184,14 +188,13 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 		delta *= -1;
 	}
 
-
-	RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD);
+	RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD, num_order_rows);
 	strcpy(o->odate, asc_date[tmp_date - STARTDATE]);
 
-	pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
-	RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
+	pick_str(&o_priority_set, O_PRIO_SD, o->opriority, num_order_rows);
+	RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD, num_order_rows);
 	sprintf(o->clerk, szFormat, O_CLRK_TAG, clk_num);
-	TEXT(O_CMNT_LEN, O_CMNT_SD, o->comment);
+	TEXT(O_CMNT_LEN, O_CMNT_SD, o->comment, num_order_rows, O_CMNT_SD_LEN);
 	o->clen = (int)strlen(o->comment);
 #ifdef DEBUG
 	if (o->clen > O_CMNT_MAX)
@@ -203,24 +206,24 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 	o->orderstatus = 'O';
 	ocnt = 0;
 
-	RANDOM(o->lines, O_LCNT_MIN, O_LCNT_MAX, O_LCNT_SD);
+	RANDOM(o->lines, O_LCNT_MIN, O_LCNT_MAX, O_LCNT_SD, num_order_rows);
 	for (lcnt = 0; lcnt < o->lines; lcnt++)
 	{
 		o->l[lcnt].okey = o->okey;;
 		o->l[lcnt].lcnt = lcnt + 1;
-		RANDOM(o->l[lcnt].quantity, L_QTY_MIN, L_QTY_MAX, L_QTY_SD);
-		RANDOM(o->l[lcnt].discount, L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD);
-		RANDOM(o->l[lcnt].tax, L_TAX_MIN, L_TAX_MAX, L_TAX_SD);
-		pick_str(&l_instruct_set, L_SHIP_SD, o->l[lcnt].shipinstruct);
-		pick_str(&l_smode_set, L_SMODE_SD, o->l[lcnt].shipmode);
-		TEXT(L_CMNT_LEN, L_CMNT_SD, o->l[lcnt].comment);
+		RANDOM(o->l[lcnt].quantity, L_QTY_MIN, L_QTY_MAX, L_QTY_SD, num_lineitem_rows);
+		RANDOM(o->l[lcnt].discount, L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD, num_lineitem_rows);
+		RANDOM(o->l[lcnt].tax, L_TAX_MIN, L_TAX_MAX, L_TAX_SD, num_lineitem_rows);
+		pick_str(&l_instruct_set, L_SHIP_SD, o->l[lcnt].shipinstruct, num_lineitem_rows);
+		pick_str(&l_smode_set, L_SMODE_SD, o->l[lcnt].shipmode, num_lineitem_rows);
+		TEXT(L_CMNT_LEN, L_CMNT_SD, o->l[lcnt].comment, num_lineitem_rows, L_CMNT_SD_LEN);
 		o->l[lcnt].clen = (int)strlen(o->l[lcnt].comment);
 		if (scale >= 30000)
 			RANDOM64(o->l[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
 		else
-			RANDOM(o->l[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
+			RANDOM(o->l[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD, num_lineitem_rows);
 		rprice = rpb_routine(o->l[lcnt].partkey);
-		RANDOM(supp_num, 0, 3, L_SKEY_SD);
+		RANDOM(supp_num, 0, 3, L_SKEY_SD, num_lineitem_rows);
 		PART_SUPP_BRIDGE(o->l[lcnt].suppkey, o->l[lcnt].partkey, supp_num);
 		o->l[lcnt].eprice = rprice * o->l[lcnt].quantity;
 
@@ -230,11 +233,11 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 			((long) 100 + o->l[lcnt].tax)
 			/ (long) PENNIES;
 
-		RANDOM(s_date, L_SDTE_MIN, L_SDTE_MAX, L_SDTE_SD);
+		RANDOM(s_date, L_SDTE_MIN, L_SDTE_MAX, L_SDTE_SD, num_lineitem_rows);
 		s_date += tmp_date;
-		RANDOM(c_date, L_CDTE_MIN, L_CDTE_MAX, L_CDTE_SD);
+		RANDOM(c_date, L_CDTE_MIN, L_CDTE_MAX, L_CDTE_SD, num_lineitem_rows);
 		c_date += tmp_date;
-		RANDOM(r_date, L_RDTE_MIN, L_RDTE_MAX, L_RDTE_SD);
+		RANDOM(r_date, L_RDTE_MIN, L_RDTE_MAX, L_RDTE_SD, num_lineitem_rows);
 		r_date += s_date;
 
 
@@ -245,7 +248,7 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 
 		if (julian(r_date) <= CURRENTDATE)
 		{
-			pick_str(&l_rflag_set, L_RFLG_SD, tmp_str);
+			pick_str(&l_rflag_set, L_RFLG_SD, tmp_str, num_lineitem_rows);
 			o->l[lcnt].rflag[0] = *tmp_str;
 		}
 		else
@@ -284,27 +287,35 @@ mk_part(DSS_HUGE index, part_t * p)
 		sprintf(szBrandFormat, P_BRND_FMT, 2, HUGE_FORMAT + 1);
 		bInit = 1;
 	}
+
+	DSS_HUGE num_part_rows = L_PKEY_MAX;
+	DSS_HUGE num_partsupp_rows = L_PKEY_MAX * SUPP_PER_PART;
+
 	p->partkey = index;
 	agg_str(&colors, (long) P_NAME_SCL, (long) P_NAME_SD, p->name);
-	RANDOM(temp, P_MFG_MIN, P_MFG_MAX, P_MFG_SD);
+	RANDOM(temp, P_MFG_MIN, P_MFG_MAX, P_MFG_SD, num_part_rows);
 	sprintf(p->mfgr, szFormat, P_MFG_TAG, temp);
-	RANDOM(brnd, P_BRND_MIN, P_BRND_MAX, P_BRND_SD);
+	RANDOM(brnd, P_BRND_MIN, P_BRND_MAX, P_BRND_SD, num_part_rows);
 	sprintf(p->brand, szBrandFormat, P_BRND_TAG, (temp * 10 + brnd));
-	p->tlen = pick_str(&p_types_set, P_TYPE_SD, p->type);
+	p->tlen = pick_str(&p_types_set, P_TYPE_SD, p->type, num_part_rows);
 	p->tlen = (int)strlen(p_types_set.list[p->tlen].text);
-	RANDOM(p->size, P_SIZE_MIN, P_SIZE_MAX, P_SIZE_SD);
-	pick_str(&p_cntr_set, P_CNTR_SD, p->container);
+	RANDOM(p->size, P_SIZE_MIN, P_SIZE_MAX, P_SIZE_SD, num_part_rows);
+	pick_str(&p_cntr_set, P_CNTR_SD, p->container, num_part_rows);
 	p->retailprice = rpb_routine(index);
-	TEXT(P_CMNT_LEN, P_CMNT_SD, p->comment);
+	TEXT(P_CMNT_LEN, P_CMNT_SD, p->comment, num_part_rows, P_CMNT_SD_LEN);
 	p->clen = (int)strlen(p->comment);
 
+	// CAUTION: cannot skew the mapping from partsupp lines to supp key 
+	// since the relationship between L_PARTKEY and L_SUPPKEY also depends on the bridge
+	// In other words, relationship between PARTKEY and SUPPKEY has to be a fixed 
+	// (not random) formula
 	for (snum = 0; snum < SUPP_PER_PART; snum++)
 	{
 		p->s[snum].partkey = p->partkey;
 		PART_SUPP_BRIDGE(p->s[snum].suppkey, index, snum);
-		RANDOM(p->s[snum].qty, PS_QTY_MIN, PS_QTY_MAX, PS_QTY_SD);
-		RANDOM(p->s[snum].scost, PS_SCST_MIN, PS_SCST_MAX, PS_SCST_SD);
-		TEXT(PS_CMNT_LEN, PS_CMNT_SD, p->s[snum].comment);
+		RANDOM(p->s[snum].qty, PS_QTY_MIN, PS_QTY_MAX, PS_QTY_SD, num_partsupp_rows);
+		RANDOM(p->s[snum].scost, PS_SCST_MIN, PS_SCST_MAX, PS_SCST_SD, num_partsupp_rows);
+		TEXT(PS_CMNT_LEN, PS_CMNT_SD, p->s[snum].comment, num_partsupp_rows, PS_CMNT_SD_LEN);
 		p->s[snum].clen = (int)strlen(p->s[snum].comment);
 	}
 	return (0);
@@ -317,6 +328,8 @@ mk_supp(DSS_HUGE index, supplier_t * s)
 	static int      bInit = 0;
 	static char     szFormat[100];
 
+	DSS_HUGE num_supp_rows = tdefs[SUPP].base * scale;
+
 	if (!bInit)
 	{
 		sprintf(szFormat, S_NAME_FMT, 9, HUGE_FORMAT + 1);
@@ -324,24 +337,23 @@ mk_supp(DSS_HUGE index, supplier_t * s)
 	}
 	s->suppkey = index;
 	sprintf(s->name, szFormat, S_NAME_TAG, index);
-	V_STR(S_ADDR_LEN, S_ADDR_SD, s->address);
+	V_STR(S_ADDR_LEN, S_ADDR_SD, s->address, num_supp_rows);
 	s->alen = (int)strlen(s->address);
-	RANDOM(i, 0, nations.count - 1, S_NTRG_SD);
+	RANDOM(i, 0, nations.count - 1, S_NTRG_SD, num_supp_rows);
 	s->nation_code = i;
-	gen_phone(i, s->phone, S_PHNE_SD);
-	RANDOM(s->acctbal, S_ABAL_MIN, S_ABAL_MAX, S_ABAL_SD);
+	gen_phone(i, s->phone, S_PHNE_SD, num_supp_rows);
+	RANDOM(s->acctbal, S_ABAL_MIN, S_ABAL_MAX, S_ABAL_SD, num_supp_rows);
 
-	TEXT(S_CMNT_LEN, S_CMNT_SD, s->comment);
+	TEXT(S_CMNT_LEN, S_CMNT_SD, s->comment, num_supp_rows, S_CMNT_SD_LEN);
 	s->clen = (int)strlen(s->comment);
 	/*
 	 * these calls should really move inside the if stmt below, but this
 	 * will simplify seedless parallel load
 	 */
-	RANDOM(bad_press, 1, 10000, BBB_CMNT_SD);
-	RANDOM(type, 0, 100, BBB_TYPE_SD);
-	RANDOM(noise, 0, (s->clen - BBB_CMNT_LEN), BBB_JNK_SD);
-	RANDOM(offset, 0, (s->clen - (BBB_CMNT_LEN + noise)),
-	       BBB_OFFSET_SD);
+	RANDOM(bad_press, 1, 10000, BBB_CMNT_SD, num_supp_rows);
+	RANDOM(type, 0, 100, BBB_TYPE_SD, num_supp_rows);
+	RANDOM_unif(noise, (DSS_HUGE)0, (DSS_HUGE)((s->clen - BBB_CMNT_LEN)), (long)BBB_JNK_SD); // ZipfInt does not support variable high value across calls
+	RANDOM_unif(offset, (DSS_HUGE)0, (DSS_HUGE)(s->clen - (BBB_CMNT_LEN + noise)), (long)BBB_OFFSET_SD); // ZipfInt ditto as above
 	if (bad_press <= S_CMNT_BBB)
 	{
 		type = (type < BBB_DEADBEATS) ? 0 : 1;
@@ -433,7 +445,7 @@ mk_nation(DSS_HUGE index, code_t * c)
 	c->code = index - 1;
 	c->text = nations.list[index - 1].text;
 	c->join = nations.list[index - 1].weight;
-	TEXT(N_CMNT_LEN, N_CMNT_SD, c->comment);
+	TEXT(N_CMNT_LEN, N_CMNT_SD, c->comment, (DSS_HUGE)nations.count, N_CMNT_SD_LEN);
 	c->clen = (int)strlen(c->comment);
 	return (0);
 }
@@ -445,7 +457,7 @@ mk_region(DSS_HUGE index, code_t * c)
 	c->code = index - 1;
 	c->text = regions.list[index - 1].text;
 	c->join = 0;		/* for completeness */
-	TEXT(R_CMNT_LEN, R_CMNT_SD, c->comment);
+	TEXT(R_CMNT_LEN, R_CMNT_SD, c->comment, (DSS_HUGE)regions.count, R_CMNT_SD_LEN);
 	c->clen = (int)strlen(c->comment);
 	return (0);
 }

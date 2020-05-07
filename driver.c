@@ -407,6 +407,7 @@ usage (void)
 	fprintf (stderr, "-T r   -- generate region ONLY\n");
 	fprintf (stderr, "-T s   -- generate suppliers ONLY\n");
 	fprintf (stderr, "-T S   -- generate partsupp ONLY\n");
+	fprintf (stderr, "-z <d> -- skew columns with <d> zipf factor\n");
 	fprintf (stderr,
 		"\nTo generate the SF=1 (1GB), validation database population, use:\n");
 	fprintf (stderr, "\tdbgen -vf -s 1\n");
@@ -451,7 +452,7 @@ process_options (int count, char **vector)
 	FILE *pF;
 	
 	while ((option = getopt (count, vector,
-		"b:C:d:fi:hO:P:qs:S:T:U:v")) != -1)
+		"b:C:d:fi:hO:P:qs:S:T:U:vz:")) != -1)
 	switch (option)
 	{
 		case 'b':				/* load distributions from named file */
@@ -589,6 +590,9 @@ process_options (int count, char **vector)
 				exit (1);
 			}
 			break;
+		case 'z':
+			skew_zipf_factor = atof (optarg);
+			break;
 		default:
 			printf ("ERROR: option '%c' unknown.\n",
 				*(vector[optind] + 1));
@@ -651,6 +655,108 @@ void validate_options(void)
 	return;
 }
 
+void setup_top_ranks_for_zipf()
+{
+	DSS_HUGE zero = (DSS_HUGE)0;
+
+	DSS_HUGE n_cmnt_max_len = (DSS_HUGE)(N_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE n_cmnt_min_len = (DSS_HUGE)(N_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE r_cmnt_max_len = (DSS_HUGE)(R_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE r_cmnt_min_len = (DSS_HUGE)(R_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE s_cmnt_max_len = (DSS_HUGE)(S_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE s_cmnt_min_len = (DSS_HUGE)(S_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE c_cmnt_max_len = (DSS_HUGE)(C_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE c_cmnt_min_len = (DSS_HUGE)(C_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE p_cmnt_max_len = (DSS_HUGE)(P_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE p_cmnt_min_len = (DSS_HUGE)(P_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE ps_cmnt_max_len = (DSS_HUGE)(PS_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE ps_cmnt_min_len = (DSS_HUGE)(PS_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE o_cmnt_max_len = (DSS_HUGE)(O_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE o_cmnt_min_len = (DSS_HUGE)(O_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE l_cmnt_max_len = (DSS_HUGE)(L_CMNT_LEN * V_STR_HGH);
+	DSS_HUGE l_cmnt_min_len = (DSS_HUGE)(L_CMNT_LEN * V_STR_LOW);
+	DSS_HUGE num_supp_rows = (tdefs[SUPP].base * scale);
+	DSS_HUGE num_cust_rows = (tdefs[CUST].base * scale);
+	DSS_HUGE num_part_rows = (tdefs[PART].base * scale);
+	DSS_HUGE num_partsupp_rows = (tdefs[PART].base * scale) * SUPP_PER_PART;
+	DSS_HUGE num_order_rows = (tdefs[ORDER].base * scale);
+	DSS_HUGE num_lineitem_rows = (tdefs[ORDER].base * scale * ((O_LCNT_MIN + O_LCNT_MAX) / 2));
+
+	struct zdef zdefs[] =
+	{
+		{N_CMNT_SD, zero, (DSS_HUGE)(TEXT_POOL_SIZE) - n_cmnt_max_len, (DSS_HUGE)nations.count},
+		{N_CMNT_SD_LEN, n_cmnt_min_len, n_cmnt_max_len, (DSS_HUGE)nations.count},
+		
+		{R_CMNT_SD, zero, (DSS_HUGE)(TEXT_POOL_SIZE)-r_cmnt_max_len, (DSS_HUGE)regions.count},
+		{R_CMNT_SD_LEN, r_cmnt_min_len, r_cmnt_max_len, (DSS_HUGE)regions.count},
+
+		{S_ADDR_SD, zero, (DSS_HUGE)MAX_LONG, num_supp_rows},
+		{S_NTRG_SD, zero, (DSS_HUGE)nations.count -1, num_supp_rows},
+		{S_PHNE_SD, (DSS_HUGE)100, (DSS_HUGE)999, num_supp_rows},
+		{S_ABAL_SD, (DSS_HUGE)S_ABAL_MIN, (DSS_HUGE)S_ABAL_MAX, num_supp_rows},
+		{S_CMNT_SD, zero, (DSS_HUGE)(TEXT_POOL_SIZE) - s_cmnt_max_len, num_supp_rows},
+		{S_CMNT_SD_LEN, s_cmnt_min_len, s_cmnt_max_len, num_supp_rows},
+		{BBB_CMNT_SD, (DSS_HUGE)1, (DSS_HUGE)10000, num_supp_rows},
+		{BBB_TYPE_SD, (DSS_HUGE)0, (DSS_HUGE)100, num_supp_rows},
+		
+		{C_ADDR_SD, zero, (DSS_HUGE)MAX_LONG, num_cust_rows},
+		{C_NTRG_SD, zero, (DSS_HUGE)nations.count - 1, num_cust_rows},
+		{C_PHNE_SD, (DSS_HUGE)100, (DSS_HUGE)999, num_cust_rows},
+		{C_ABAL_SD, (DSS_HUGE)C_ABAL_MIN, (DSS_HUGE)C_ABAL_MAX, num_cust_rows},
+		{C_MSEG_SD, (DSS_HUGE)1, (DSS_HUGE)(c_mseg_set.list[c_mseg_set.count-1].weight), num_cust_rows},
+		{C_CMNT_SD, zero, (DSS_HUGE)(TEXT_POOL_SIZE) - c_cmnt_max_len, num_cust_rows},
+		{C_CMNT_SD_LEN, c_cmnt_min_len, c_cmnt_max_len, num_cust_rows},
+
+		{P_MFG_SD, (DSS_HUGE)P_MFG_MIN, (DSS_HUGE)P_MFG_MAX, num_part_rows},
+		{P_BRND_SD, (DSS_HUGE)P_BRND_MIN, (DSS_HUGE)P_BRND_MAX, num_part_rows},
+		{P_TYPE_SD, (DSS_HUGE)1, (DSS_HUGE)(p_types_set.list[p_types_set.count-1].weight), num_part_rows},
+		{P_SIZE_SD, (DSS_HUGE)P_SIZE_MIN, (DSS_HUGE)P_SIZE_MAX, num_part_rows},
+		{P_CNTR_SD, (DSS_HUGE)1, (DSS_HUGE)(p_cntr_set.list[p_cntr_set.count-1].weight), num_part_rows},
+		{P_CMNT_SD, zero, (DSS_HUGE)(TEXT_POOL_SIZE) - p_cmnt_max_len, num_part_rows},
+		{P_CMNT_SD_LEN, p_cmnt_min_len, p_cmnt_max_len, num_part_rows},
+
+		{PS_QTY_SD, (DSS_HUGE)PS_QTY_MIN, (DSS_HUGE)PS_QTY_MAX, num_partsupp_rows},
+		{PS_SCST_SD, (DSS_HUGE)PS_SCST_MIN, (DSS_HUGE)PS_SCST_MAX, num_partsupp_rows},
+		{PS_CMNT_SD, zero, (DSS_HUGE)(TEXT_POOL_SIZE) - ps_cmnt_max_len, num_partsupp_rows},
+		{PS_CMNT_SD_LEN, ps_cmnt_min_len, ps_cmnt_max_len, num_partsupp_rows},
+
+		{O_CKEY_SD, (DSS_HUGE)O_CKEY_MIN, (DSS_HUGE)O_CKEY_MAX, num_order_rows},
+		{O_ODATE_SD, (DSS_HUGE)O_ODATE_MIN, (DSS_HUGE)O_ODATE_MAX, num_order_rows},
+		{O_PRIO_SD, (DSS_HUGE)1, (DSS_HUGE)(o_priority_set.list[o_priority_set.count-1].weight), num_order_rows},
+		{O_CLRK_SD, (DSS_HUGE)1, (DSS_HUGE)(MAX((scale * O_CLRK_SCL), O_CLRK_SCL)), num_order_rows},
+		{O_CMNT_SD, zero, (DSS_HUGE)TEXT_POOL_SIZE - o_cmnt_max_len, num_order_rows},
+		{O_CMNT_SD_LEN, o_cmnt_min_len, o_cmnt_max_len, num_order_rows},
+		{O_LCNT_SD, (DSS_HUGE)O_LCNT_MIN, (DSS_HUGE)O_LCNT_MAX, num_order_rows},
+
+		{L_QTY_SD, (DSS_HUGE)L_QTY_MIN, (DSS_HUGE)L_QTY_MAX, num_lineitem_rows},
+		{L_DCNT_SD, (DSS_HUGE)L_DCNT_MIN, (DSS_HUGE)L_DCNT_MAX, num_lineitem_rows},
+		{L_TAX_SD, (DSS_HUGE)L_TAX_MIN, (DSS_HUGE)L_TAX_MAX, num_lineitem_rows},
+		{L_SHIP_SD, (DSS_HUGE)1, (DSS_HUGE)(l_instruct_set.list[l_instruct_set.count-1].weight), num_lineitem_rows},
+		{L_SMODE_SD, (DSS_HUGE)1, (DSS_HUGE)(l_smode_set.list[l_smode_set.count-1].weight), num_lineitem_rows},
+		{L_CMNT_SD, zero, (DSS_HUGE)TEXT_POOL_SIZE - l_cmnt_max_len, num_lineitem_rows},
+		{L_CMNT_SD_LEN, l_cmnt_min_len, l_cmnt_max_len, num_lineitem_rows},
+		{L_PKEY_SD, (DSS_HUGE)L_PKEY_MIN, (DSS_HUGE)L_PKEY_MAX, num_lineitem_rows},
+		{L_SKEY_SD, (DSS_HUGE)0, (DSS_HUGE)3, num_lineitem_rows},
+		{L_SDTE_SD, (DSS_HUGE)L_SDTE_MIN, (DSS_HUGE)L_SDTE_MAX, num_lineitem_rows},
+		{L_CDTE_SD, (DSS_HUGE)L_CDTE_MIN, (DSS_HUGE)L_CDTE_MAX, num_lineitem_rows},
+		{L_RDTE_SD, (DSS_HUGE)L_RDTE_MIN, (DSS_HUGE)L_RDTE_MAX, num_lineitem_rows},
+		{L_RFLG_SD, (DSS_HUGE)1, (DSS_HUGE)(l_rflag_set.list[l_rflag_set.count-1].weight), num_lineitem_rows},
+	};
+
+	int num_zdefs = sizeof(zdefs) / sizeof(struct zdef);
+	for (int zdef_ind = 0; zdef_ind < num_zdefs; zdef_ind++)
+	{
+		struct zdef curr_zdef = zdefs[zdef_ind];
+		int tnum = Seed[curr_zdef.seed].table;
+		if (table == (1 << tnum) ||
+			(table == (1 << PART_PSUPP) && (tnum == PART || tnum == PSUPP)) ||
+			(table == (1 << ORDER_LINE) && (tnum == ORDER || tnum == LINE)))
+		{
+			dss_setup_zipf(curr_zdef);
+		}
+	}
+}
+
 
 /*
 * MAIN
@@ -659,10 +765,10 @@ void validate_options(void)
 * line handling
 */
 int
-main (int ac, char **av)
+main(int ac, char** av)
 {
 	DSS_HUGE i;
-	
+
 	table = (1 << CUST) |
 		(1 << SUPP) |
 		(1 << NATION) |
@@ -670,17 +776,18 @@ main (int ac, char **av)
 		(1 << PART_PSUPP) |
 		(1 << ORDER_LINE);
 	force = 0;
-    insert_segments=0;
-    delete_segments=0;
-    insert_orders_segment=0;
-    insert_lineitem_segment=0;
-    delete_segment=0;
+	insert_segments = 0;
+	delete_segments = 0;
+	insert_orders_segment = 0;
+	insert_lineitem_segment = 0;
+	delete_segment = 0;
 	verbose = 0;
 	set_seeds = 0;
 	scale = 1;
 	flt_scale = 1.0;
 	updates = 0;
 	step = -1;
+	skew_zipf_factor = 0;
 	tdefs[ORDER].base *=
 		ORDERS_PER_CUST;			/* have to do this after init */
 	tdefs[LINE].base *=
@@ -689,84 +796,104 @@ main (int ac, char **av)
 		ORDERS_PER_CUST;			/* have to do this after init */
 	children = 1;
 	d_path = NULL;
-	
+
 #ifdef NO_SUPPORT
-	signal (SIGINT, exit);
+	signal(SIGINT, exit);
 #endif /* NO_SUPPORT */
-	process_options (ac, av);
+	process_options(ac, av);
 	validate_options();
 #if (defined(WIN32)&&!defined(_POSIX_))
 	for (i = 0; i < ac; i++)
 	{
-		spawn_args[i] = malloc (((int)strlen (av[i]) + 1) * sizeof (char));
-		MALLOC_CHECK (spawn_args[i]);
-		strcpy (spawn_args[i], av[i]);
+		spawn_args[i] = malloc(((int)strlen(av[i]) + 1) * sizeof(char));
+		MALLOC_CHECK(spawn_args[i]);
+		strcpy(spawn_args[i], av[i]);
 	}
 	spawn_args[ac] = NULL;
 #endif
-	
+
 	if (verbose >= 0)
-		{
-		fprintf (stderr,
+	{
+		fprintf(stderr,
 			"%s Population Generator (Version %d.%d.%d)\n",
 			NAME, VERSION, RELEASE, PATCH);
-		fprintf (stderr, "Copyright %s %s\n", TPC, C_DATES);
-		}
-	
-	load_dists ();
+		fprintf(stderr, "Copyright %s %s\n", TPC, C_DATES);
+	}
+
+	load_dists();
 #ifdef RNG_TEST
-	for (i=0; i <= MAX_STREAM; i++)
+	for (i = 0; i <= MAX_STREAM; i++)
 		Seed[i].nCalls = 0;
 #endif
 	/* have to do this after init */
 	tdefs[NATION].base = nations.count;
 	tdefs[REGION].base = regions.count;
-	
-	/* 
-	* updates are never parallelized 
+
+
+	// create the manifestos for all the seeds that will need zipf generation
+	if (skew_zipf_factor > 0)
+	{		
+		if ((zipf_debug_file = fopen("zipf_debug.log", "w")) == NULL)
+		{
+			fprintf(stderr, "cannot open zipf_debug.log; errno = %d\n", errno);
+			exit(2);
+		}
+
+		fprintf(zipf_debug_file, "--- Zipfian skew: %f #ranks in manifesto: %d---\n", skew_zipf_factor, NumTopRanksPerStream);
+
+		setup_top_ranks_for_zipf();
+	}
+	else
+	{
+		zipf_debug_file = NULL;
+	}
+
+
+	/*
+	* updates are never parallelized
 	*/
 	if (updates)
-		{
-		/* 
+	{
+		/*
 		 * set RNG to start generating rows beyond SF=scale
 		 */
-		set_state (ORDER, scale, 100, 101, &i); 
+		set_state(ORDER, scale, 100, 101, &i);
 		rowcnt = (int)(tdefs[ORDER_LINE].base / 10000 * scale * UPD_PCT);
 		if (step > 0)
-			{
-			/* 
+		{
+			/*
 			 * adjust RNG for any prior update generation
 			 */
-	      for (i=1; i < step; i++)
-         {
-			sd_order(0, rowcnt);
-			sd_line(0, rowcnt);
-         }
-			upd_num = step - 1;
+			for (i = 1; i < step; i++)
+			{
+				sd_order(0, rowcnt);
+				sd_line(0, rowcnt);
 			}
+			upd_num = step - 1;
+		}
 		else
 			upd_num = 0;
 
 		while (upd_num < updates)
-			{
+		{
 			if (verbose > 0)
-				fprintf (stderr,
-				"Generating update pair #%d for %s",
-				upd_num + 1, tdefs[ORDER_LINE].comment);
-			insert_orders_segment=0;
-			insert_lineitem_segment=0;
-			delete_segment=0;
+				fprintf(stderr,
+					"Generating update pair #%d for %s",
+					upd_num + 1, tdefs[ORDER_LINE].comment);
+			insert_orders_segment = 0;
+			insert_lineitem_segment = 0;
+			delete_segment = 0;
 			minrow = upd_num * rowcnt + 1;
-			gen_tbl (ORDER_LINE, minrow, rowcnt, upd_num + 1);
+			gen_tbl(ORDER_LINE, minrow, rowcnt, upd_num + 1);
 			if (verbose > 0)
-				fprintf (stderr, "done.\n");
-			pr_drange (ORDER_LINE, minrow, rowcnt, upd_num + 1);
+				fprintf(stderr, "done.\n");
+			pr_drange(ORDER_LINE, minrow, rowcnt, upd_num + 1);
 			upd_num++;
-			}
-
-		exit (0);
 		}
-	
+
+		exit(0);
+	}
+
 	/**
 	** actual data generation section starts here
 	**/
@@ -779,7 +906,7 @@ main (int ac, char **av)
 		{
 			if (children > 1 && i < NATION)
 			{
-				partial ((int)i, step);
+				partial((int)i, step);
 			}
 			else
 			{
@@ -789,12 +916,23 @@ main (int ac, char **av)
 				else
 					rowcnt = tdefs[i].base;
 				if (verbose > 0)
-					fprintf (stderr, "Generating data for %s", tdefs[i].comment);
-				gen_tbl ((int)i, minrow, rowcnt, upd_num);
+					fprintf(stderr, "Generating data for %s", tdefs[i].comment);
+				gen_tbl((int)i, minrow, rowcnt, upd_num);
 				if (verbose > 0)
-					fprintf (stderr, "done.\n");
+					fprintf(stderr, "done.\n");
 			}
 		}
-			
-		return (0);
+
+	if (skew_zipf_factor > 0)
+	{
+		fprintf(zipf_debug_file, "-- Skew summary ---\n");
+		for (long stream = 0; stream < MAX_STREAM; stream++)
+			fprintf(zipf_debug_file, "[%ld]: #calls= %I64d #outside of manifesto= %I64d #givenUp= %I64d\n",
+				stream, num_zipf_rand_calls[stream], num_zipf_rand_calls_out_of_manifesto[stream],
+				num_zipf_rand_calls_out_of_manifesto_give_up[stream]);
+		fprintf(zipf_debug_file, "-- End skew summary ---\n");
+		fclose(zipf_debug_file);
+	}
+
+	return (0);
 }

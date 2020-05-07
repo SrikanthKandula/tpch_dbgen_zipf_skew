@@ -102,7 +102,7 @@ void	permute(long *a, int c, long s)
 	{
 		for (i=0; i < c; i++)
 		{
-			RANDOM(source, (long)i, (long)(c - 1), s);
+			RANDOM_unif(source, (DSS_HUGE)i, (DSS_HUGE)(c) - 1, (long)s);
 			temp = *(a + source);
 			*(a + source) = *(a + i) ;
 			*(a + i) = temp;

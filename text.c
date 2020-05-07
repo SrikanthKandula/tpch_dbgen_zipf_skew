@@ -86,8 +86,6 @@
 #pragma warning(default:4214)
 #endif
 
-#define TEXT_POOL_SIZE (300 * 1024 * 1024)  /* 300MiB */
-
 #include "dss.h"
 #include "dsstypes.h"
 
@@ -114,7 +112,7 @@ txt_vp(char *dest, int sd)
 		res = 0;
 
 	
-	pick_str(&vp, sd, &syntax[0]);
+	pick_str_uniform(&vp, sd, &syntax[0]);
 	parse_target = syntax;
 	while ((cptr = strtok(parse_target, " ")) != NULL)
 	{
@@ -131,7 +129,7 @@ txt_vp(char *dest, int sd)
 			src = &auxillaries;
 			break;
 		}	/* end of POS switch statement */
-		i = pick_str(src, sd, dest);
+		i = pick_str_uniform(src, sd, dest);
 		i = (int)strlen(DIST_MEMBER(src, i));
 		dest += i;
 		res += i;
@@ -173,7 +171,7 @@ txt_np(char *dest, int sd)
 		res = 0;
 
 	
-	pick_str(&np, sd, &syntax[0]);
+	pick_str_uniform(&np, sd, &syntax[0]);
 	parse_target = syntax;
 	while ((cptr = strtok(parse_target, " ")) != NULL)
 	{
@@ -193,7 +191,7 @@ txt_np(char *dest, int sd)
 			src = &nouns;
 			break;
 		}	/* end of POS switch statement */
-		i = pick_str(src, sd, dest);
+		i = pick_str_uniform(src, sd, dest);
 		i = (int)strlen(DIST_MEMBER(src, i));
 		dest += i;
 		res += i;
@@ -234,7 +232,7 @@ txt_sentence(char *dest, int sd)
 		len = 0;
 
 	
-	pick_str(&grammar, sd, syntax);
+	pick_str_uniform(&grammar, sd, syntax);
 	cptr = syntax;
 
 next_token:	/* I hate goto's, but can't seem to have parent and child use strtok() */
@@ -251,14 +249,14 @@ next_token:	/* I hate goto's, but can't seem to have parent and child use strtok
 			len = txt_np(dest, sd);
 			break;
 		case 'P':
-			i = pick_str(&prepositions, sd, dest);
+			i = pick_str_uniform(&prepositions, sd, dest);
 			len = (int)strlen(DIST_MEMBER(&prepositions, i));
 			strcpy((dest + len), " the ");
 			len += 5;
 			len += txt_np(dest + len, sd);
 			break;
 		case 'T':
-			i = pick_str(&terminators, sd, --dest); /*terminators should abut previous word */
+			i = pick_str_uniform(&terminators, sd, --dest); /*terminators should abut previous word */
 			len = (int)strlen(DIST_MEMBER(&terminators, i));
 			break;
 		}	/* end of POS switch statement */
@@ -283,7 +281,7 @@ done:
  *		generated sentence as required
  */
 void
-dbg_text(char *tgt, int min, int max, int sd)
+dbg_text(char *tgt, int min, int max, int sd, DSS_HUGE numtuples, int sd_len)
 {
    DSS_HUGE hgLength = 0,
       hgOffset,
@@ -310,7 +308,7 @@ dbg_text(char *tgt, int min, int max, int sd)
             fprintf(stderr, "%3.0f%%\b\b\b\b", (100.0 * wordlen)/TEXT_POOL_SIZE);
          }
          
-         s_len = txt_sentence(sentence, 5);
+         s_len = txt_sentence(sentence, 5);  // sk: this is a cache of text; we can only skew one call per seed
          if ( s_len < 0)
             INTERNAL_ERROR("Bad sentence formation");
          needed = TEXT_POOL_SIZE - wordlen;
@@ -335,8 +333,8 @@ dbg_text(char *tgt, int min, int max, int sd)
          fprintf(stderr, "\n");
    }
 
-   RANDOM(hgOffset, 0, TEXT_POOL_SIZE - max, sd);
-   RANDOM(hgLength, min, max, sd);
+   RANDOM(hgOffset, 0, TEXT_POOL_SIZE - max, sd, numtuples);
+   RANDOM(hgLength, min, max, sd_len, numtuples);
    strncpy(&tgt[0], &szTextPool[hgOffset], (int)hgLength);
    tgt[hgLength] = '\0';
 

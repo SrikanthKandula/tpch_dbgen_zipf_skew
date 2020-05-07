@@ -176,17 +176,19 @@ yes_no(char *prompt)
  * and comma)
  */
 void
-a_rnd(int min, int max, int column, char *dest)
+a_rnd(int min, int max, int column, char *dest, DSS_HUGE numtuples)
 {
    DSS_HUGE      i,
              len,
              char_int;
 
-   RANDOM(len, min, max, column);
+   // if zipf skew, per seed ("column"), we only support one nLow and nHigh; 
+   // to fix, add an extra seed
+   RANDOM_unif(len, (DSS_HUGE)min, (DSS_HUGE)max, (long)column);
    for (i = 0; i < len; i++)
       {
       if (i % 5 == 0)
-        RANDOM(char_int, 0, MAX_LONG, column);
+        RANDOM(char_int, 0, MAX_LONG, column, numtuples);
       *(dest + i) = alpha_num[char_int & 077];
       char_int >>= 6;
       }
@@ -200,21 +202,39 @@ a_rnd(int min, int max, int column, char *dest)
  * position
  */
 void
-e_str(distribution *d, int min, int max, int stream, char *dest)
+e_str(distribution *d, int min, int max, int stream, char *dest, DSS_HUGE numtuples)
 {
     char strtmp[MAXAGG_LEN + 1];
     DSS_HUGE loc;
     int len;
 
-    a_rnd(min, max, stream, dest);
-    pick_str(d, stream, strtmp);
+    a_rnd(min, max, stream, dest, numtuples);
+    pick_str(d, stream, strtmp, numtuples);
     len = (int)strlen(strtmp);
-    RANDOM(loc, 0, ((int)strlen(dest) - 1 - len), stream);
+    RANDOM(loc, 0, ((int)strlen(dest) - 1 - len), stream, numtuples);
     strncpy(dest + loc, strtmp, len);
 
     return;
 }
 
+/*
+ * return the string associate with the LSB of a uniformly selected
+ * long in [1, max] where max is determined by the distribution
+ * being queried
+ * Added this method as a step-out strategy for calls that do not go to skew datagen
+ */
+int
+pick_str_uniform(distribution* s, int c, char* target)
+{
+    long      i = 0;
+    DSS_HUGE      j;
+
+    RANDOM_unif(j, (DSS_HUGE)1, (DSS_HUGE)(s->list[s->count - 1].weight), c);
+    while (s->list[i].weight < j)
+        i++;
+    strcpy(target, s->list[i].text);
+    return(i);
+}
 
 /*
  * return the string associate with the LSB of a uniformly selected
@@ -222,12 +242,12 @@ e_str(distribution *d, int min, int max, int stream, char *dest)
  * being queried
  */
 int
-pick_str(distribution *s, int c, char *target)
+pick_str(distribution *s, int c, char *target, DSS_HUGE numtuples)
 {
     long      i = 0;
     DSS_HUGE      j;
 
-    RANDOM(j, 1, s->list[s->count - 1].weight, c);
+    RANDOM(j, 1, s->list[s->count - 1].weight, c, numtuples);
     while (s->list[i].weight < j)
         i++;
     strcpy(target, s->list[i].text);

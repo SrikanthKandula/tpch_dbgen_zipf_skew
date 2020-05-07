@@ -94,7 +94,15 @@ char *env_config PROTO((char *tag, char *dflt));
 void NthElement(DSS_HUGE, DSS_HUGE *);
 
 void
-dss_random(DSS_HUGE *tgt, DSS_HUGE lower, DSS_HUGE upper, long stream)
+dss_random(DSS_HUGE *tgt, DSS_HUGE lower, DSS_HUGE upper, long stream, DSS_HUGE numtuples)
+{
+	*tgt = skew_zipf_factor == 0 ? UnifInt(lower, upper, stream) : ZipfInt(lower, upper, stream, numtuples);
+	Seed[stream].usage += 1;
+
+	return;
+}
+
+void dss_random_unif(DSS_HUGE* tgt, DSS_HUGE lower, DSS_HUGE upper, long stream)
 {
 	*tgt = UnifInt(lower, upper, stream);
 	Seed[stream].usage += 1;
@@ -211,7 +219,7 @@ UnifInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream)
 	
 	if ((nHigh == MAX_LONG) && (nLow == 0))
 	{
-		dRange = DOUBLE_CAST (nHigh32 - nLow32 + 1);
+		dRange = dM; //  DOUBLE_CAST(nHigh32 - nLow32 + 1); // SK: this overflows; wtf? why not just dM
 		nRange = nHigh32 - nLow32 + 1;
 	}
 	else
@@ -225,8 +233,226 @@ UnifInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream)
 	Seed[nStream].nCalls += 1;
 #endif
 	nTemp = (DSS_HUGE) (((double) Seed[nStream].value / dM) * (dRange));
+
+	DSS_HUGE retval = nTemp+nLow;
+	if (retval < nLow || retval > nHigh)
+	{
+		fprintf(stderr, "WARN! UnifInt is croaking!\n");
+	}
     return (nLow + nTemp);
 }
 
+
+int FindAmongSortedValues(struct ZipfMetaData *zmd, DSS_HUGE val)
+{
+	int lowRank = 0;
+	int highRank = zmd->numRanksUsed - 1;
+	
+	while (lowRank <= highRank)
+	{
+		int rankToTry = (lowRank + highRank) / 2;
+
+		if (zmd->sortedValues[rankToTry] == val) return 1;
+		else if (zmd->sortedValues[rankToTry] < val) lowRank = rankToTry + 1;
+		else highRank = rankToTry - 1;
+	}
+
+	return 0;
+}
+
+int compare_dss_huge(const void* left, const void* right)
+{
+	DSS_HUGE l = *((DSS_HUGE*)left);
+	DSS_HUGE r = *((DSS_HUGE*)right);
+	return (l - r) < 0 ? -1 : (l == r ? 0 : 1);
+}
+
+void dss_setup_zipf(struct zdef curr_zdef)
+{
+	DSS_HUGE nLow = curr_zdef.nLow, nHigh = curr_zdef.nHigh, numtuples = curr_zdef.numtuples;
+	long nStream = curr_zdef.seed;
+
+	struct ZipfMetaData* zmd = &zmdPerStream[nStream];
+
+	fprintf(zipf_debug_file, "Setting zipf manifest for stream %ld -->\n", nStream);
+	if (nHigh < nLow || numtuples <= 0)
+	{
+		fprintf(zipf_debug_file, "-- ERR invalid inputs; high %I64d low %I64d #tuples %I64d\n", nHigh, nLow, numtuples);
+		exit(2);
+	}
+
+	DSS_HUGE num_dv = nHigh - nLow + 1;
+	DSS_HUGE rank_at_which_weight_below_epsilon = (DSS_HUGE)ceil(pow(ZMD_EPSILON, -1.0 / skew_zipf_factor));
+	DSS_HUGE numranks_dh = min(min(num_dv, numtuples), rank_at_which_weight_below_epsilon);
+
+	if (numranks_dh > (1 << 30))
+	{
+		fprintf(zipf_debug_file, "-- ERR too many ranks; #= %I64d", numranks_dh);
+		exit(2);
+	}
+
+	int numranks = (int)numranks_dh;
+
+	double denominator = 0;
+	int rank;
+	for (rank = 1; rank <= numranks; rank++)
+	{
+		double weight = pow(1.0 / rank, skew_zipf_factor);
+		denominator += weight;
+
+		if (weight < ZMD_EPSILON) break;
+		if (rank < NumTopRanksPerStream)
+			zmd->weights[rank] = weight;
+	}
+
+	zmd->numRanksUsed = (rank < NumTopRanksPerStream ? rank - 1 : NumTopRanksPerStream - 1);
+	double tot_prob = 0;
+	for (rank = 1; rank <= zmd->numRanksUsed; rank++)
+	{
+		zmd->weights[rank] /= denominator;
+		tot_prob += zmd->weights[rank];
+	}
+
+	zmd->weights[0] = (1 - tot_prob); // probability outside of the top few ranks
+	zmd->initNHigh = nHigh;
+	zmd->initNLow = nLow;
+	zmd->numTuples = numtuples;
+
+	if (zmd->numRanksUsed == num_dv)
+	{
+		// All distinct values have ranks; take them all in and then permute randomly
+		for (rank = 1; rank <= zmd->numRanksUsed; rank++)
+			zmd->valuesAtRank[rank] = nLow + rank - 1;
+
+		// permute
+		for (rank = 1; rank < zmd->numRanksUsed; rank++)
+		{
+			DSS_HUGE swapWith;
+			RANDOM_unif(swapWith, (DSS_HUGE)rank, (DSS_HUGE)zmd->numRanksUsed, (long)nStream);
+			if (swapWith != rank)
+			{
+				DSS_HUGE temp = zmd->valuesAtRank[rank];
+				zmd->valuesAtRank[rank] = zmd->valuesAtRank[swapWith];
+				zmd->valuesAtRank[swapWith] = temp;
+			}
+		}
+	}
+	else
+	{
+		// Randomly pick a few values to have ranks
+		// TODO: this is a bit sloppy; consider implementing a reservoir so that it will finish in one full pass
+		// The following can be faster than a full pass but runs the risk of taking a long time when #dv is
+		// just slightly larger than the #ranks needed
+		//
+		for (rank = 1; rank <= zmd->numRanksUsed; rank++)
+		{
+			int found_new_val;
+			DSS_HUGE val;
+			do
+			{
+				RANDOM_unif(val, (DSS_HUGE)nLow, (DSS_HUGE)nHigh, (long)nStream);
+				if (val < nLow || val > nHigh)
+				{
+					fprintf(stderr, "-- ERR UnifInt croaks low= %I64d high= %I64d val= %I64d\n", nLow, nHigh, val);
+					exit(2);
+				}
+
+				found_new_val = 1;
+				for (int subrank = 1; subrank < rank; subrank++)
+					if (zmd->valuesAtRank[subrank] == val)
+					{
+						found_new_val = 0;
+						break;
+					}
+			} 
+			while (found_new_val == 0);
+			
+			zmd->valuesAtRank[rank] = val;
+		}
+	}
+
+	if (zmd->numRanksUsed == numtuples || zmd->numRanksUsed == num_dv)
+		zmd->weights[0] = 0.0; // to protect against double trouble
+
+	for (rank = 1; rank <= zmd->numRanksUsed; rank++)
+	{
+		DSS_HUGE val = zmd->valuesAtRank[rank];
+		zmd->sortedValues[rank - 1] = val;
+	}
+	qsort(&zmd->sortedValues, zmd->numRanksUsed, sizeof(DSS_HUGE), compare_dss_huge);
+
+	fprintf(zipf_debug_file, "-- set #ranks= %d low= %I64d high= %I64d remProb= %f\n", 
+		zmd->numRanksUsed, zmd->initNLow, zmd->initNHigh, zmd->weights[0]);
+
+	for (int r = 1; r <= zmd->numRanksUsed; r++)
+		fprintf(zipf_debug_file, "\t [%d]: val= %I64d wgt= %f\n", r, zmd->valuesAtRank[r], (float)zmd->weights[r]);
+	fprintf(zipf_debug_file, "----------------\n");
+}
+
+DSS_HUGE
+ZipfInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream, DSS_HUGE numtuples)
+{
+	if (nStream < 0 || nStream > MAX_STREAM)
+		nStream = 0;
+
+	struct ZipfMetaData* zmd = &zmdPerStream[nStream];
+	if (zmd->initNHigh != nHigh || zmd->initNLow != nLow || zmd->numTuples != numtuples)
+	{
+		fprintf(zipf_debug_file, 
+			"-- ERR stream %ld not initialized correctly; high %I64d !=? %I64d, low %I64d !=? %I64d numtuples %I64d !=? %I64d", 
+			nStream, zmd->initNHigh, nHigh, zmd->initNLow, nLow, zmd->numTuples, numtuples);
+		exit(2);
+	}
+
+	Seed[nStream].value = NextRand(Seed[nStream].value); // usage is accounted for in dss_random()
+#ifdef RNG_TEST
+	Seed[nStream].nCalls += 1;
+#endif
+
+	num_zipf_rand_calls[nStream] += 1;
+
+	double rv = ((double)Seed[nStream].value / dM);
+	double probThusFar = 0;
+	int foundSample = 0;
+	DSS_HUGE sampleVal = 0;
+	for (int rank = 0; rank <= zmd->numRanksUsed; rank++)
+	{
+		probThusFar += zmd->weights[rank];
+		if (rv > probThusFar) continue;
+
+		if (rank > 0)
+		{
+			// read off the manifest
+			sampleVal = zmd->valuesAtRank[rank];
+		}
+		else
+		{
+			num_zipf_rand_calls_out_of_manifesto[nStream] += 1;
+
+			// pick a random value that is not in the manifest
+			double dRange = ((nHigh == MAX_LONG) && (nLow == 0)) ? dM : DOUBLE_CAST(nHigh - nLow + 1);
+
+			int num_tries = 5;
+			DSS_HUGE val;
+			do {
+				num_tries--;
+				Seed[nStream].value = NextRand(Seed[nStream].value);
+				Seed[nStream].usage += 1; // so that the usage is marked
+#ifdef RNG_TEST
+				Seed[nStream].nCalls += 1;
+#endif
+				double rv = ((double)Seed[nStream].value / dM);
+				val = nLow + (DSS_HUGE)(rv * dRange);
+			} while (num_tries > 0 && FindAmongSortedValues(zmd, val) == 1);
+
+			if (num_tries == 0)
+				num_zipf_rand_calls_out_of_manifesto_give_up[nStream] += 1;
+
+			sampleVal = val;
+		}
+	}
+
+	return sampleVal;
+}
 
 

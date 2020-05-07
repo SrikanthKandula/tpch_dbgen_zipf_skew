@@ -138,12 +138,12 @@ void NthElement (DSS_HUGE N, DSS_HUGE *StartSeed)
 
 /* updates Seed[column] using the a_rnd algorithm */
 void
-fake_a_rnd(int min, int max, int column)
+fake_a_rnd(int min, int max, int column, DSS_HUGE numtuples)
 {
    DSS_HUGE len;
    DSS_HUGE itcount;
 
-   RANDOM(len, min, max, column);
+   RANDOM(len, min, max, column, numtuples);
    if (len % 5L == 0)
       itcount = len/5;
    else 
@@ -162,9 +162,10 @@ sd_part(int child, DSS_HUGE skip_count)
    int i;
  
    for (i=P_MFG_SD; i<= P_CNTR_SD; i++)
-       ADVANCE_STREAM(i, skip_count);
+       ADVANCE_STREAM(i, skip_count * 10);
  
-   ADVANCE_STREAM(P_CMNT_SD, skip_count * 2);
+   ADVANCE_STREAM(P_CMNT_SD, skip_count * 10);
+   ADVANCE_STREAM(P_CMNT_SD_LEN, skip_count * 10);
    ADVANCE_STREAM(P_NAME_SD, skip_count * 92);
 
    return(0L);
@@ -183,15 +184,16 @@ sd_line(int child, DSS_HUGE skip_count)
 				ADVANCE_STREAM64(i, skip_count);
 			else
 */
-				ADVANCE_STREAM(i, skip_count);
-		ADVANCE_STREAM(L_CMNT_SD, skip_count * 2);
+				ADVANCE_STREAM(i, skip_count * 10);
+		ADVANCE_STREAM(L_CMNT_SD, skip_count * 10);
+        ADVANCE_STREAM(L_CMNT_SD_LEN, skip_count * 10);
 	}
 	
 	/* need to special case this as the link between master and detail */
 	if (child == 1)
 	{
-		ADVANCE_STREAM(O_ODATE_SD, skip_count);
-		ADVANCE_STREAM(O_LCNT_SD, skip_count);
+		ADVANCE_STREAM(O_ODATE_SD, skip_count * 10);
+		ADVANCE_STREAM(O_LCNT_SD, skip_count * 10);
 	}
 	
 	return(0L);
@@ -200,18 +202,19 @@ sd_line(int child, DSS_HUGE skip_count)
 long 
 sd_order(int child, DSS_HUGE skip_count)        
 {
-	ADVANCE_STREAM(O_LCNT_SD, skip_count);
+	ADVANCE_STREAM(O_LCNT_SD, skip_count * 10);
 /*
 	if (scale >= 30000)
 		ADVANCE_STREAM64(O_CKEY_SD, skip_count);
 	else
 */
-		ADVANCE_STREAM(O_CKEY_SD, skip_count);
-	ADVANCE_STREAM(O_CMNT_SD, skip_count * 2);
-	ADVANCE_STREAM(O_SUPP_SD, skip_count);
-	ADVANCE_STREAM(O_CLRK_SD, skip_count);
-	ADVANCE_STREAM(O_PRIO_SD, skip_count);
-	ADVANCE_STREAM(O_ODATE_SD, skip_count);
+	ADVANCE_STREAM(O_CKEY_SD, skip_count * 10);
+	ADVANCE_STREAM(O_CMNT_SD, skip_count * 10);
+    ADVANCE_STREAM(O_CMNT_SD_LEN, skip_count * 10);
+    ADVANCE_STREAM(O_SUPP_SD, skip_count);
+	ADVANCE_STREAM(O_CLRK_SD, skip_count * 10);
+	ADVANCE_STREAM(O_PRIO_SD, skip_count * 10);
+	ADVANCE_STREAM(O_ODATE_SD, skip_count * 10);
 
 	return (0L);
 }
@@ -223,9 +226,10 @@ sd_psupp(int child, DSS_HUGE skip_count)
 	
 	for (j=0; j < SUPP_PER_PART; j++)
 		{
-		ADVANCE_STREAM(PS_QTY_SD, skip_count);
-		ADVANCE_STREAM(PS_SCST_SD, skip_count);
-		ADVANCE_STREAM(PS_CMNT_SD, skip_count * 2);
+		ADVANCE_STREAM(PS_QTY_SD, skip_count * 10);
+		ADVANCE_STREAM(PS_SCST_SD, skip_count * 10);
+		ADVANCE_STREAM(PS_CMNT_SD, skip_count * 10);
+        ADVANCE_STREAM(PS_CMNT_SD_LEN, skip_count * 10);
 		}
 
 	return(0L);
@@ -235,12 +239,13 @@ long
 sd_cust(int child, DSS_HUGE skip_count)
 {
    
-   ADVANCE_STREAM(C_ADDR_SD, skip_count * 9);
-   ADVANCE_STREAM(C_CMNT_SD, skip_count * 2);
+   ADVANCE_STREAM(C_ADDR_SD, skip_count * 9 * 10);
+   ADVANCE_STREAM(C_CMNT_SD, skip_count * 10);
+   ADVANCE_STREAM(C_CMNT_SD_LEN, skip_count * 10);
    ADVANCE_STREAM(C_NTRG_SD, skip_count);
-   ADVANCE_STREAM(C_PHNE_SD, 3L * skip_count);
-   ADVANCE_STREAM(C_ABAL_SD, skip_count);
-   ADVANCE_STREAM(C_MSEG_SD, skip_count);
+   ADVANCE_STREAM(C_PHNE_SD, 3L * skip_count * 10);
+   ADVANCE_STREAM(C_ABAL_SD, skip_count * 10);
+   ADVANCE_STREAM(C_MSEG_SD, skip_count * 10);
    return(0L);
 }
 
@@ -248,14 +253,15 @@ long
 sd_supp(int child, DSS_HUGE skip_count)
 {
    ADVANCE_STREAM(S_NTRG_SD, skip_count);
-   ADVANCE_STREAM(S_PHNE_SD, 3L * skip_count);
-   ADVANCE_STREAM(S_ABAL_SD, skip_count);
-   ADVANCE_STREAM(S_ADDR_SD, skip_count * 9);
-   ADVANCE_STREAM(S_CMNT_SD, skip_count * 2);
-   ADVANCE_STREAM(BBB_CMNT_SD, skip_count);
-   ADVANCE_STREAM(BBB_JNK_SD, skip_count);
-   ADVANCE_STREAM(BBB_OFFSET_SD, skip_count);
-   ADVANCE_STREAM(BBB_TYPE_SD, skip_count);      /* avoid one trudge */
+   ADVANCE_STREAM(S_PHNE_SD, 3L * skip_count * 10);
+   ADVANCE_STREAM(S_ABAL_SD, skip_count * 10);
+   ADVANCE_STREAM(S_ADDR_SD, skip_count * 90);
+   ADVANCE_STREAM(S_CMNT_SD, skip_count * 10);
+   ADVANCE_STREAM(S_CMNT_SD_LEN, skip_count * 10);
+   ADVANCE_STREAM(BBB_CMNT_SD, skip_count * 10);
+   ADVANCE_STREAM(BBB_JNK_SD, skip_count * 10);
+   ADVANCE_STREAM(BBB_OFFSET_SD, skip_count * 10);
+   ADVANCE_STREAM(BBB_TYPE_SD, skip_count * 10);      /* avoid one trudge */
    
    return(0L);
 }

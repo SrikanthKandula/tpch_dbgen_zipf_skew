@@ -147,7 +147,11 @@ static char lnoise[4] = {'|', '/', '-', '\\' };
 #define  MK_SPARSE(key, seq) \
          (((((key>>3)<<2)|(seq & 0x0003))<<3)|(key & 0x0007))
 
-#define RANDOM(tgt, lower, upper, stream)	dss_random(&tgt, lower, upper, stream)
+// this is the previous version of random paged out by skew gen
+// #define RANDOM(tgt, lower, upper, stream)	dss_random(&tgt, lower, upper, stream)
+// this is the new version of RANDOM needed to generate tuples with skew
+#define RANDOM(tgt, lower, upper, stream, numtuples) dss_random(&tgt, lower, upper, stream, numtuples)
+#define RANDOM_unif(tgt, lower, upper, stream) dss_random_unif(&tgt, lower, upper, stream)
 #define RANDOM64(tgt, lower, upper, stream)	dss_random64(&tgt, lower, upper, stream)
 	
      
@@ -211,6 +215,7 @@ FILE	*tbl_open PROTO((int tbl, char *mode));
 long	dssncasecmp PROTO((char *s1, char *s2, int n));
 long	dsscasecmp PROTO((char *s1, char *s2));
 int		pick_str PROTO((distribution * s, int c, char *target));
+int     pick_str_uniform PROTO((distribution* s, int c, char* target));
 void	agg_str PROTO((distribution *set, long count, long col, char *dest));
 void	read_dist PROTO((char *path, char *name, distribution * target));
 void	embed_str PROTO((distribution *d, int min, int max, int stream, char *dest));
@@ -222,7 +227,9 @@ DSS_HUGE	set_state PROTO((int t, long scale, long procs, long step, DSS_HUGE *e)
 /* rnd.c */
 DSS_HUGE	NextRand PROTO((DSS_HUGE nSeed));
 DSS_HUGE	UnifInt PROTO((DSS_HUGE nLow, DSS_HUGE nHigh, long nStream));
-void	dss_random(DSS_HUGE *tgt, DSS_HUGE min, DSS_HUGE max, long seed);
+void	dss_random(DSS_HUGE *tgt, DSS_HUGE min, DSS_HUGE max, long seed, DSS_HUGE numtuples);
+void	dss_random_unif(DSS_HUGE* tgt, DSS_HUGE min, DSS_HUGE max, long seed);
+void    dss_setup_zipf(struct zdef curr_zdef);
 void	row_start(int t);
 void	row_stop(int t);
 void	dump_seeds(int t);
@@ -286,7 +293,9 @@ EXTERN int delete_segments;
 EXTERN int insert_orders_segment;
 EXTERN int insert_lineitem_segment;
 EXTERN int delete_segment;
- 
+
+/* added for zipf skew distribution */
+EXTERN double skew_zipf_factor;
 
 #ifndef DECLARER
 extern tdef tdefs[];
@@ -417,7 +426,7 @@ extern tdef tdefs[];
 #define  ENDDATE      98365
 #define  TOTDATE      2557
 #define  UPD_PCT      10
-#define  MAX_STREAM   47
+#define  MAX_STREAM   55
 #define  V_STR_LOW    0.4
 #define  PENNIES    100 /* for scaled int money arithmetic */
 #define  Q11_FRACTION (double)0.0001
@@ -546,4 +555,49 @@ sprintf(tgt, "19%02d-%02d-%02d", yr, mn, dy)
 #define  BBB_TYPE_SD   45         
 #define  BBB_CMNT_SD   46         
 #define  BBB_OFFSET_SD 47         
+// used by skew generator
+#define N_CMNT_SD_LEN 48
+#define R_CMNT_SD_LEN 49
+#define C_CMNT_SD_LEN 50
+#define O_CMNT_SD_LEN 51
+#define L_CMNT_SD_LEN 52
+#define P_CMNT_SD_LEN 53
+#define PS_CMNT_SD_LEN 54
+#define S_CMNT_SD_LEN 55
+
+// #define PS_SUPP_PER_PART_SD 48
+
+
+#define TEXT_POOL_SIZE (300 * 1024 * 1024)  /* 300MiB */
+
+
+
+#define NumTopRanksPerStream 100
+#define ZMD_EPSILON  (0.0001)
+
+struct ZipfMetaData
+{
+    DSS_HUGE valuesAtRank[NumTopRanksPerStream];
+    DSS_HUGE sortedValues[NumTopRanksPerStream];
+    double weights[NumTopRanksPerStream];
+    DSS_HUGE initNLow, initNHigh, numTuples;
+    int numRanksUsed;
+};
+
+EXTERN struct ZipfMetaData zmdPerStream[MAX_STREAM + 1];
+
+struct zdef
+{
+    long seed;
+    DSS_HUGE nLow;
+    DSS_HUGE nHigh;
+    DSS_HUGE numtuples;
+};
+
+EXTERN DSS_HUGE num_zipf_rand_calls[MAX_STREAM];
+EXTERN DSS_HUGE num_zipf_rand_calls_out_of_manifesto[MAX_STREAM];
+EXTERN DSS_HUGE num_zipf_rand_calls_out_of_manifesto_give_up[MAX_STREAM];
+
+EXTERN FILE* zipf_debug_file;
+
 #endif            /* DSS_H */
