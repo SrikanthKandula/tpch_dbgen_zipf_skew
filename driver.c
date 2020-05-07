@@ -407,7 +407,7 @@ usage (void)
 	fprintf (stderr, "-T r   -- generate region ONLY\n");
 	fprintf (stderr, "-T s   -- generate suppliers ONLY\n");
 	fprintf (stderr, "-T S   -- generate partsupp ONLY\n");
-	fprintf (stderr, "-z <d> -- skew columns with <d> zipf factor\n");
+	fprintf (stderr, "-z <f> -- skew columns with <f> zipf factor\n");
 	fprintf (stderr,
 		"\nTo generate the SF=1 (1GB), validation database population, use:\n");
 	fprintf (stderr, "\tdbgen -vf -s 1\n");

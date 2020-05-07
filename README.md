@@ -1,9 +1,21 @@
 # tpch_dbgen_zipf_skew
 
+1. Summary
 TPC-H datagen relies on uniform distributions to an extensive degree. The values of dimension columns
 are generated uniformly random within a range. The numbers of lines in LINEITEM that have a given 
 ORDERKEY is also chosen uniformly at random and so are the number of suppliers (SUPPKEY) per part 
 (PARTKEY).  The goal of this change is to add skew, specifically zipfian skew, to the extent possible.
+
+2. Main change and example usages
+The net change is an additional option -z <f> where the argument, a float, is the zipfian scale factor.
+
+.\Debug\dbgen.exe -T s -s 1000 -z 2
+generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf scale factor of 2
+
+.\Debug\dbgen.exe -T o -s 1000 -z 2 -C 100 -S 4
+generates the 4th of 100 chunks with a zipf scale factor of 2 of the orders and lineitem tables
+
+3. Method description and parameter choice
 
 Zipfian skew is such that the frequency with which a value at rank k occurs is proportional to 1/k^\alpha.
 For example, if \alpha is 2, then by rank the frequencies are proportional to: 1, 0.25, 0.11, 0.125, ...
@@ -43,12 +55,12 @@ we want to use a bounded size manifest and we want to make no more than a small 
 of random calls.  We analyze the properties of this method in the following.
 
 * Case of number of distinct values in the range or number of tuples being smaller than N:
-This happens for a fair number of columns in TPC-H. For such columns, the method above generates proper
-zipfian distribution.
+Many columns in TPC-H have only hundreds of distinct values. 
+For such columns, the method above generates proper zipfian distribution.
 
 * Dependence on the zipf scale factor:
 The larger the scale factor the faster the probability decays. Thus, closely approximating a zipfian
-distribution can require maintaining more ranks when the zipf scale factor is smaller. The table below
+distribution can require maintaining more ranks when the zipf scale factor is small. The table below
 shows, for different zipf scale factors, the fraction of the total probability that is contributed by the 
 top N ranks:
 
