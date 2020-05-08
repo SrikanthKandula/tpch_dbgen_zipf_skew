@@ -415,6 +415,14 @@ usage (void)
 	fprintf (stderr, "\tdbgen -v -U 1 -s 1\n");
 }
 
+void zipf_print_seed_state(int s, char *mesg)
+{
+	fprintf(zipf_debug_file, "%s task %ld out of %ld, seed status: ", mesg, s, children);
+	for (long streamid = 0; streamid < MAX_STREAM; streamid++)
+		fprintf(zipf_debug_file, "[%ld]=%I64d", streamid, Seed[streamid].value);
+	fprintf(zipf_debug_file, "\n");
+}
+
 /*
 * int partial(int tbl, int s) -- generate the s-th part of the named tables data
 */
@@ -434,6 +442,9 @@ partial (int tbl, int s)
 	
 	rowcnt = set_state(tbl, scale, children, s, &extra);
 
+	if (skew_zipf_factor > 0)
+		zipf_print_seed_state(s, "Begin");
+
 	if (s == children)
 		gen_tbl (tbl, rowcnt * (s - 1) + 1, rowcnt + extra, upd_num);
 	else
@@ -441,7 +452,10 @@ partial (int tbl, int s)
 	
 	if (verbose > 0)
 		fprintf (stderr, "done.\n");
-	
+
+	if (skew_zipf_factor > 0)
+		zipf_print_seed_state(s, "End");
+
 	return (0);
 }
 
@@ -749,8 +763,8 @@ void setup_top_ranks_for_zipf()
 		struct zdef curr_zdef = zdefs[zdef_ind];
 		int tnum = Seed[curr_zdef.seed].table;
 		if (table == (1 << tnum) ||
-			(table == (1 << PART_PSUPP) && (tnum == PART || tnum == PSUPP)) ||
-			(table == (1 << ORDER_LINE) && (tnum == ORDER || tnum == LINE)))
+			((table == 1 << PART_PSUPP || table == 1 << PART || table == 1 << PSUPP) && (tnum == PART || tnum == PSUPP)) ||
+			((table == 1 << ORDER_LINE || table == 1 << ORDER || table == 1 << LINE) && (tnum == ORDER || tnum == LINE)))
 		{
 			dss_setup_zipf(curr_zdef);
 		}

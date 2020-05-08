@@ -450,6 +450,8 @@ ZipfInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream, DSS_HUGE numtuples)
 
 			sampleVal = val;
 		}
+
+		break;
 	}
 
 	return sampleVal;

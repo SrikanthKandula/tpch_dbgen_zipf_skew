@@ -227,22 +227,22 @@ pr_line(order_t *o, int mode)
     for (i = 0; i < o->lines; i++)
         {
         PR_STRT(fp_l);
-        PR_HUGE(fp_l, &o->l[i].okey);
-        PR_HUGE(fp_l, &o->l[i].partkey);
-        PR_HUGE(fp_l, &o->l[i].suppkey);
-        PR_HUGE(fp_l, &o->l[i].lcnt);
-        PR_HUGE(fp_l, &o->l[i].quantity);
-        PR_MONEY(fp_l, &o->l[i].eprice);
-        PR_MONEY(fp_l, &o->l[i].discount);
-        PR_MONEY(fp_l, &o->l[i].tax);
-        PR_CHR(fp_l, &o->l[i].rflag[0]);
-        PR_CHR(fp_l, &o->l[i].lstatus[0]);
-        PR_STR(fp_l, o->l[i].sdate, DATE_LEN);
-        PR_STR(fp_l, o->l[i].cdate, DATE_LEN);
-        PR_STR(fp_l, o->l[i].rdate, DATE_LEN);
-        PR_STR(fp_l, o->l[i].shipinstruct, L_INST_LEN);
-        PR_STR(fp_l, o->l[i].shipmode, L_SMODE_LEN);
-        PR_VSTR_LAST(fp_l, o->l[i].comment,o->l[i].clen);
+        PR_HUGE(fp_l, &o->l[i].okey); // rowcount
+        PR_HUGE(fp_l, &o->l[i].partkey); // L_PKEY_SD
+        PR_HUGE(fp_l, &o->l[i].suppkey); // L_SKEY_SD
+        PR_HUGE(fp_l, &o->l[i].lcnt); // O_LCNT_SD
+        PR_HUGE(fp_l, &o->l[i].quantity); // L_QTY_SD
+        PR_MONEY(fp_l, &o->l[i].eprice); // derived
+        PR_MONEY(fp_l, &o->l[i].discount); // L_DCNT_SD
+        PR_MONEY(fp_l, &o->l[i].tax); // L_TAX_SD
+        PR_CHR(fp_l, &o->l[i].rflag[0]); // L_RFLG_SD
+        PR_CHR(fp_l, &o->l[i].lstatus[0]); // derived
+        PR_STR(fp_l, o->l[i].sdate, DATE_LEN); // L_SDTE_SD
+        PR_STR(fp_l, o->l[i].cdate, DATE_LEN); // L_CDTE_SD
+        PR_STR(fp_l, o->l[i].rdate, DATE_LEN); // L_RDTE_SD
+        PR_STR(fp_l, o->l[i].shipinstruct, L_INST_LEN); // L_SHIP_SD
+        PR_STR(fp_l, o->l[i].shipmode, L_SMODE_LEN); // L_SMODE_SD
+        PR_VSTR_LAST(fp_l, o->l[i].comment,o->l[i].clen); // L_CMNT_SD and L_CMNT_SD_LEN
         PR_END(fp_l);
         }
 
