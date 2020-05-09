@@ -207,14 +207,14 @@ typedef struct SEED_T {
 /* bm_utils.c */
 char	*env_config PROTO((char *var, char *dflt));
 long	yes_no PROTO((char *prompt));
-void     a_rnd PROTO((int min, int max, int column, char *dest));
+void     a_rnd PROTO((int min, int max, int column, char *dest, DSS_HUGE numtuples));
 int     tx_rnd PROTO((long min, long max, long column, char *tgt));
 long	julian PROTO((long date));
 long	unjulian PROTO((long date));
 FILE	*tbl_open PROTO((int tbl, char *mode));
 long	dssncasecmp PROTO((char *s1, char *s2, int n));
 long	dsscasecmp PROTO((char *s1, char *s2));
-int		pick_str PROTO((distribution * s, int c, char *target));
+int		pick_str PROTO((distribution * s, int c, char *target, DSS_HUGE numtuples));
 int     pick_str_uniform PROTO((distribution* s, int c, char* target));
 void	agg_str PROTO((distribution *set, long count, long col, char *dest));
 void	read_dist PROTO((char *path, char *name, distribution * target));
