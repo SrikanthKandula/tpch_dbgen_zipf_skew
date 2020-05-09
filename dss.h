@@ -601,5 +601,6 @@ EXTERN DSS_HUGE num_zipf_rand_calls_out_of_manifesto_give_up[MAX_STREAM];
 EXTERN FILE* zipf_debug_file;
 
 void zipf_print_seed_state(int s, char* mesg);
+void dss_setup_zipf(struct zdef cz);
 
 #endif            /* DSS_H */
