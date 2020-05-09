@@ -229,7 +229,6 @@ DSS_HUGE	NextRand PROTO((DSS_HUGE nSeed));
 DSS_HUGE	UnifInt PROTO((DSS_HUGE nLow, DSS_HUGE nHigh, long nStream));
 void	dss_random(DSS_HUGE *tgt, DSS_HUGE min, DSS_HUGE max, long seed, DSS_HUGE numtuples);
 void	dss_random_unif(DSS_HUGE* tgt, DSS_HUGE min, DSS_HUGE max, long seed);
-void    dss_setup_zipf(struct zdef curr_zdef);
 void	row_start(int t);
 void	row_stop(int t);
 void	dump_seeds(int t);
