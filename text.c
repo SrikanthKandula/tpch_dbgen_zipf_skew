@@ -375,7 +375,7 @@ main()
 
 	while (1)
 	{
-		dbg_text(&prattle[0], 300, 400, 0);
+		dbg_text(&prattle[0], 300, 400, 0, 0);
 		printf("<%s>\n", prattle);
 	}
 
