@@ -123,9 +123,9 @@ double flt_scale;
 #if (defined(WIN32)&&!defined(_POSIX_))
 char *spawn_args[25];
 #endif
-#ifdef RNG_TEST
+// #ifdef RNG_TEST
 extern seed_t Seed[];
-#endif
+// #endif
 static int bTableSet = 0;
 
 
