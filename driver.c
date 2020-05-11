@@ -464,6 +464,8 @@ process_options (int count, char **vector)
 {
 	int option;
 	FILE *pF;
+
+	skew_zipf_factor = 0;
 	
 	while ((option = getopt (count, vector,
 		"b:C:d:fi:hO:P:qs:S:T:U:vz:")) != -1)

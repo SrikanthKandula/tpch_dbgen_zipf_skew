@@ -233,6 +233,7 @@ UnifInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream)
 	Seed[nStream].nCalls += 1;
 #endif
 	nTemp = (DSS_HUGE) (((double) Seed[nStream].value / dM) * (dRange));
+	if (nTemp < 0) nTemp *= -1;
 
 	DSS_HUGE retval = nTemp+nLow;
 	if (retval < nLow || retval > nHigh)
@@ -412,6 +413,7 @@ ZipfInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream, DSS_HUGE numtuples)
 	num_zipf_rand_calls[nStream] += 1;
 
 	double rv = ((double)Seed[nStream].value / dM);
+	if (rv < 0) rv *= -1;
 	double probThusFar = 0;
 	int foundSample = 0;
 	DSS_HUGE sampleVal = 0;
@@ -442,6 +444,7 @@ ZipfInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream, DSS_HUGE numtuples)
 				Seed[nStream].nCalls += 1;
 #endif
 				double rv = ((double)Seed[nStream].value / dM);
+				if (rv < 0) rv *= -1;
 				val = nLow + (DSS_HUGE)(rv * dRange);
 			} while (num_tries > 0 && FindAmongSortedValues(zmd, val) == 1);
 
@@ -456,5 +459,3 @@ ZipfInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream, DSS_HUGE numtuples)
 
 	return sampleVal;
 }
-
-
