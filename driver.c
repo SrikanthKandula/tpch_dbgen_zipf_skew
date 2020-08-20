@@ -952,7 +952,7 @@ main(int ac, char** av)
 			fprintf(zipf_debug_file, "[%ld]: #calls= %I64d #outside of manifesto= %I64d #givenUp= %I64d\n",
 				stream, num_zipf_rand_calls[stream], num_zipf_rand_calls_out_of_manifesto[stream],
 				num_zipf_rand_calls_out_of_manifesto_give_up[stream]);
-		fprintf(zipf_debug_file, "-- End skew summary ---\n");
+		fprintf(zipf_debug_file, "-- End skew summary ---\n");		
 		fclose(zipf_debug_file);
 	}
 
