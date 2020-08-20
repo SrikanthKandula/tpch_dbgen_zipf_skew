@@ -48,6 +48,9 @@ Note an important caveat: the above process does not generate proper zipf distri
 * Case of number of distinct values in the range or number of tuples being smaller than N: Many columns in TPC-H have only hundreds of distinct values.  For such columns, the method above generates proper zipfian distribution.
 
 * Dependence on the zipf scale factor: The larger the scale factor the faster the probability decays. Thus, closely approximating a zipfian distribution requires maintaining more ranks when the zipf scale factor is small. The table below shows, for different zipf scale factors, the fraction of the total probability that is contributed by the top N ranks:
+a | b | c
+---------
+d| e|f
 
 Zipf Scale Factor |  N= 100 |  N= 1000  |  N= 10000
 ------------------|---------|-----------|-----------
