@@ -49,16 +49,13 @@ Note an important caveat: the above process does not generate proper zipf distri
 
 * Dependence on the zipf scale factor: The larger the scale factor the faster the probability decays. Thus, closely approximating a zipfian distribution requires maintaining more ranks when the zipf scale factor is small. The table below shows, for different zipf scale factors, the fraction of the total probability that is contributed by the top N ranks:
 
-a | b | c
----------
-d| e|f
 
-Zipf Scale Factor |  N= 100 |  N= 1000  |  N= 10000
-------------------|---------|-----------|-----------
-       2.0        |  99.994 |     x     |    x
-       1.5        |  95.73  |   99.996  |    x
-       1.0	      |  52.90  |   76.47   |   99.999
-       0.5        |   8.31  |   31.12   |   99.995
+Zipf Scale Factor | N= 100 | N= 1000 | N= 10000
+------------------|---------|--------|---------
+2.0 | 99.994 | x | x
+1.5 | 95.73 | 99.996 | x
+1.0 | 52.90 | 76.47 | 99.999
+0.5 | 8.31 | 31.12 | 99.995
 
 The memory footprint increases with N (but by a rather small factor). The computation cost also increases with N by a small factor.
 
