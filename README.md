@@ -9,9 +9,11 @@ We are inspired by and build on top of [prior work](https://www.microsoft.com/en
 * Uncorrelate the columns and more closely approximate zipf than prior work
 	* Prior work repeats frequent values in a consecutive sequence of rows resulting in correlation between the key column and the skewed column
 	* Prior work also forgets previously emitted values possibly resulting in greater skew than desired by the user
-	
 
-## 2. Usage
+## 2. Build
+Open `tpch.sln` in Visual Studio 2019 and build. [Tested on Windows 10.] It should be straightforward to build on other OSes and with other tools.
+
+## 3. Usage
 Identical to the datagen from [TPC-H](http://www.tpc.org/tpch/) except for one additional option `-z <f>` where the argument, a float, is the zipfian scale factor.
 
 Examples:
@@ -22,7 +24,7 @@ Generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf sc
 Generates the 4th of 100 chunks with a zipf scale factor of 2 of the orders and lineitem tables
 
 
-## 3. Method description and how to vary some internal parameters (not necessary reading)
+## 4. Method description and how to vary some internal parameters (not necessary reading)
 
 Recall that the TPC-H datagen generates uniformly distributed values; that is, the values of nonkey columns
 are generated uniformly at random from a pre-specified range. Linkages between tables are also similarly distributed; that is, the numbers of lines in LINEITEM that have a given ORDERKEY is chosen uniformly at random. The main goal of this change is to add skew, specifically zipfian skew, to the extent possible.
@@ -49,8 +51,8 @@ Note an important caveat: the above process does not generate proper zipf distri
 
 Zipf Scale Factor |  N= 100 |  N= 1000  |  N= 10000
 ------------------|---------|-----------|-----------
-       2.0        |  99.994 |           |
-       1.5        |  95.73  |   99.996  |
+       2.0        |  99.994 |     x     |    x
+       1.5        |  95.73  |   99.996  |    x
        1.0	      |  52.90  |   76.47   |   99.999
        0.5        |   8.31  |   31.12   |   99.995
 
@@ -58,7 +60,7 @@ The memory footprint increases with N (but by a rather small factor). The comput
 
 We recommend setting the NumTopRanksPerStream constant in dss.h as desired.
 
-## 4. Some caveats
+## 5. Some caveats
 
 1) We do not skew the linkage between PS_PARTKEY and PS_SUPPKEY: 
 
@@ -66,3 +68,6 @@ That is, each part has a fixed number of suppliers and the relationship between 
 {L_PARTKEY, L_SUPPKEY} and the generators for the LINETEM and PARTSUPP tables do not have any explicit coordination.
 
 2) A complication in code that is worth calling out is that the set_state calls in coupled generators (e.g., LINEITEM and ORDERS) only advance the seeds that are specific to their tables.
+
+## 6. Acknowledgements
+Manoj Syamala helped with a code review. Vivek Narasayya wrote the [previous version](https://www.microsoft.com/en-us/download/details.aspx?id=52430) and also helped brainstorm these changes.
