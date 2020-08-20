@@ -24,6 +24,7 @@ Generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf sc
 Generates the 4th of 100 chunks with a zipf scale factor of 1 of the orders and lineitem tables
 
 * 
+```
     for ((i=1; i <= 2; i++)); 
 	do 
 		mkdir -p task_${i};
@@ -32,7 +33,7 @@ Generates the 4th of 100 chunks with a zipf scale factor of 1 of the orders and 
 		../Debug/dbgen.exe -T o -s 1 -z 1 -C 10 -S $i &
 		cd ..;
 	done;
-	
+```	
 With unix-style syntax (cygwin), shows how to run two tasks in parallel in two separate folders. We recommend running tasks in different folders to keep their outputs and inputs apart. The dbgen outputs orders.tbl.${i} and lineitem.tbl.${i} files into each task_${i} folder. Examining the `zipf_debug.log` files in each folder should show that both tasks generate identical manifest and that the second task rolls over its seeds to values that the first taks ends with. This is crucial to ensure that outputs are identical irrespective of degree-of-parallelism. Examples of what you might see are present in the `sample_task_${i}` folders in the repo.
 
 ## 4. Method description and how to vary some internal parameters (not necessary reading)
