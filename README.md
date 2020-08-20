@@ -1,6 +1,6 @@
 # A parallel zipf-skewed data generator for TPC-H benchmark
 
-1. Summary
+## 1. Summary
 We edit the data generator in [TPC-H](http://www.tpc.org/tpch/) to introduce frequency skew in several columns of various tables.
 
 We are inspired by and build on top of [prior work](https://www.microsoft.com/en-us/download/details.aspx?id=52430) in the following ways:
@@ -11,7 +11,7 @@ We are inspired by and build on top of [prior work](https://www.microsoft.com/en
 	* Prior work also forgets previously emitted values possibly resulting in greater skew than desired by the user
 	
 
-2. Usage
+## 2. Usage
 Identical to the datagen from [TPC-H](http://www.tpc.org/tpch/) except for one additional option -z <f> where the argument, a float, is the zipfian scale factor.
 
 Examples:
@@ -21,11 +21,8 @@ Generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf sc
 * `.\Debug\dbgen.exe -T o -s 1000 -z 2 -C 100 -S 4`
 Generates the 4th of 100 chunks with a zipf scale factor of 2 of the orders and lineitem tables
 
-1. Summary
 
-
-
-3. Method description and how to vary some internal parameters
+## 3. Method description and how to vary some internal parameters
 
 Recall that the TPC-H datagen generates uniformly distributed values; that is, the values of nonkey columns
 are generated uniformly at random from a pre-specified range. Linkages between tables are also similarly distributed; that is, the numbers of lines in LINEITEM that have a given ORDERKEY is chosen uniformly at random. The number of suppliers (SUPPKEY) per part (PARTKEY) is also similarly generated. The main goal of this change is to add skew, specifically zipfian skew, to the extent possible.
@@ -61,7 +58,7 @@ The memory footprint increases with N (but by a rather small factor). The comput
 
 We recommend setting the NumTopRanksPerStream constant in dss.h as desired.
 
-4. Miscellaneous caveats
+## 4. Some caveats
 
 1) We do not skew the linkage between PS_PARTKEY and PS_SUPPKEY: 
 
