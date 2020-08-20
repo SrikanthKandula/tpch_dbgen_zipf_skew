@@ -23,7 +23,7 @@ Generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf sc
 * `.\Debug\dbgen.exe -T o -s 1000 -z 1 -C 100 -S 4`
 Generates the 4th of 100 chunks with a zipf scale factor of 1 of the orders and lineitem tables
 
-* 
+* Using multiple tasks to generate differnt portions of a table:
 ```
     for ((i=1; i <= 2; i++)); 
 	do 
