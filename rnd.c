@@ -275,7 +275,7 @@ void dss_setup_zipf(struct zdef curr_zdef)
 
 	struct ZipfMetaData* zmd = &zmdPerStream[nStream];
 
-	fprintf(zipf_debug_file, "Setting zipf manifest for stream %ld -->\n", nStream);
+	fprintf(zipf_debug_file, "|---------\n| Setting zipf manifest for stream %ld\n|-------\n", nStream);
 	if (nHigh < nLow || numtuples <= 0)
 	{
 		fprintf(zipf_debug_file, "-- ERR invalid inputs; high %I64d low %I64d #tuples %I64d\n", nHigh, nLow, numtuples);
@@ -285,6 +285,12 @@ void dss_setup_zipf(struct zdef curr_zdef)
 	DSS_HUGE num_dv = nHigh - nLow + 1;
 	DSS_HUGE rank_at_which_weight_below_epsilon = (DSS_HUGE)ceil(pow(ZMD_EPSILON, -1.0 / skew_zipf_factor));
 	DSS_HUGE numranks_dh = min(min(num_dv, numtuples), rank_at_which_weight_below_epsilon);
+
+	if (min(num_dv, numtuples) > rank_at_which_weight_below_epsilon)
+	{
+		fprintf(zipf_debug_file, "-- WARN: ranks only limited by epsilon; note that we only approx zipf here. #tuples= %I64d #dv= %I64d #beloweps= %I64d\n", 
+			numtuples, num_dv, rank_at_which_weight_below_epsilon);
+	}
 
 	if (numranks_dh > (1 << 30))
 	{
@@ -296,6 +302,7 @@ void dss_setup_zipf(struct zdef curr_zdef)
 
 	double denominator = 0;
 	int rank;
+	// TODO: is there a closed-form expression for denominator?
 	for (rank = 1; rank <= numranks; rank++)
 	{
 		double weight = pow(1.0 / rank, skew_zipf_factor);
@@ -387,7 +394,6 @@ void dss_setup_zipf(struct zdef curr_zdef)
 
 	for (int r = 1; r <= zmd->numRanksUsed; r++)
 		fprintf(zipf_debug_file, "\t [%d]: val= %I64d wgt= %f\n", r, zmd->valuesAtRank[r], (float)zmd->weights[r]);
-	fprintf(zipf_debug_file, "----------------\n");
 }
 
 DSS_HUGE

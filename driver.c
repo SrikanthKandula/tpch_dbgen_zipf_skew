@@ -608,6 +608,12 @@ process_options (int count, char **vector)
 			break;
 		case 'z':
 			skew_zipf_factor = atof (optarg);
+			if (skew_zipf_factor < 0)
+			{
+				printf("ERROR: option 'z' needs a non-negative argument but found %s", optarg);
+				usage();
+				exit(1);
+			}
 			break;
 		default:
 			printf ("ERROR: option '%c' unknown.\n",

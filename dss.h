@@ -572,7 +572,7 @@ sprintf(tgt, "19%02ld-%02ld-%02ld", yr, mn, dy)
 
 
 #define NumTopRanksPerStream 100
-#define ZMD_EPSILON  (0.0001)
+#define ZMD_EPSILON  (0.00000001)
 
 struct ZipfMetaData
 {
