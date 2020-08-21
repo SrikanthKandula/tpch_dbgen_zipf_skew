@@ -23,7 +23,7 @@ Generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf sc
 * `.\Debug\dbgen.exe -T o -s 1000 -z 1 -C 100 -S 4`
 Generates the 4th of 100 chunks with a zipf scale factor of 1 of the orders and lineitem tables
 
-* Using multiple tasks to generate differnt portions of a table:
+* Using multiple tasks to generate different portions of a table:
 ```
     for ((i=1; i <= 2; i++)); 
 	do 
@@ -34,7 +34,7 @@ Generates the 4th of 100 chunks with a zipf scale factor of 1 of the orders and 
 		cd ..;
 	done;
 ```	
-With unix-style syntax (cygwin), shows how to run two tasks in parallel in two separate folders. We recommend running tasks in different folders to keep their outputs and inputs apart. The dbgen outputs orders.tbl.${i} and lineitem.tbl.${i} files into each task_${i} folder. Examining the `zipf_debug.log` files in each folder should show that both tasks generate identical manifest and that the second task rolls over its seeds to values that the first taks ends with. This is crucial to ensure that outputs are identical irrespective of degree-of-parallelism. Examples of what you might see are present in the `sample_task_${i}` folders in the repo.
+With unix-style syntax (cygwin), shows how to run two tasks in parallel in two separate folders. We recommend running tasks in different folders to keep their outputs and inputs apart. The dbgen outputs orders.tbl.${i} and lineitem.tbl.${i} files into each task_${i} folder. Examining the `zipf_debug.log` files in each folder should show that both tasks generate identical manifest and that the second task rolls over its seeds to values that the first task ends with. This is crucial to ensure that outputs are identical irrespective of degree-of-parallelism. Examples of what you might see are present in the `sample_task_${i}` folders in the repo.
 
 ## 4. Performance
 Please pick a degree-of-parallelism such that each task has a reasonable amount of work (e.g., ~100MB of data to generate or more). The default TPC-H datagen precomputes random strings which can take a while; thus the constant overhead per task is sizable. Introduction of skew does not effect data generation throughput in any substantial way.
@@ -81,12 +81,12 @@ We recommend setting the NumTopRanksPerStream constant in dss.h as desired.
 1) We do not skew the linkage between PS_PARTKEY and PS_SUPPKEY: 
 
 That is, each part has a fixed number of suppliers and the relationship between {PARTKEY, SUPPKEY} pairs is a fixed deterministic function.  We do not skew this relationship because rows of the LINEITEM table also have 
-{L_PARTKEY, L_SUPPKEY} and the generators for the LINETEM and PARTSUPP tables do not have any explicit coordination.
+{L_PARTKEY, L_SUPPKEY} and the generators for the LINEITEM and PARTSUPP tables do not have any explicit coordination.
 
 2) A complication in code that is worth calling out is that the set_state calls in coupled generators (e.g., LINEITEM and ORDERS) only advance the seeds that are specific to their tables.
 
 ## 7. Debugging/ Understanding
 Examine the `zipf_debug.log` for more details on what the new changes do.
 
-## 8. Acknowledgements
+## 8. Acknowledgments
 Manoj Syamala helped with a code review. Vivek Narasayya wrote the [previous version](https://www.microsoft.com/en-us/download/details.aspx?id=52430) and also helped brainstorm these changes.
