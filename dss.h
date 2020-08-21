@@ -295,6 +295,7 @@ EXTERN int delete_segment;
 
 /* added for zipf skew distribution */
 EXTERN double skew_zipf_factor;
+EXTERN double skew_zmd_epsilon;
 
 #ifndef DECLARER
 extern tdef tdefs[];
@@ -571,8 +572,7 @@ sprintf(tgt, "19%02ld-%02ld-%02ld", yr, mn, dy)
 
 
 
-#define NumTopRanksPerStream 100
-#define ZMD_EPSILON  (0.00000001)
+#define NumTopRanksPerStream 1000
 
 struct ZipfMetaData
 {

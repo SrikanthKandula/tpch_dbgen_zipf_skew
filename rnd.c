@@ -283,8 +283,15 @@ void dss_setup_zipf(struct zdef curr_zdef)
 	}
 
 	DSS_HUGE num_dv = nHigh - nLow + 1;
-	DSS_HUGE rank_at_which_weight_below_epsilon = (DSS_HUGE)ceil(pow(ZMD_EPSILON, -1.0 / skew_zipf_factor));
+	DSS_HUGE rank_at_which_weight_below_epsilon = (DSS_HUGE)ceil(pow(skew_zmd_epsilon, -1.0 / skew_zipf_factor));
 	DSS_HUGE numranks_dh = min(min(num_dv, numtuples), rank_at_which_weight_below_epsilon);
+
+	if (rank_at_which_weight_below_epsilon < 0 || rank_at_which_weight_below_epsilon >(1 << 30))
+	{
+		fprintf(zipf_debug_file, "-- WARN: ranks to consider before prob dips below pre-defined constant (ZMD_EPSILON= %g) is too large or overflowing 64 bits (= %I64d). If you want such a low zipfian skew, increase ZMD_EPSILON.",
+			skew_zmd_epsilon, rank_at_which_weight_below_epsilon);
+		exit(2);
+	}
 
 	if (min(num_dv, numtuples) > rank_at_which_weight_below_epsilon)
 	{
@@ -308,7 +315,7 @@ void dss_setup_zipf(struct zdef curr_zdef)
 		double weight = pow(1.0 / rank, skew_zipf_factor);
 		denominator += weight;
 
-		if (weight < ZMD_EPSILON) break;
+		if (weight < skew_zmd_epsilon) break;
 		if (rank < NumTopRanksPerStream)
 			zmd->weights[rank] = weight;
 	}

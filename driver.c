@@ -614,6 +614,8 @@ process_options (int count, char **vector)
 				usage();
 				exit(1);
 			}
+
+			skew_zmd_epsilon = skew_zipf_factor >= 1 ? 0.00000001 : (skew_zipf_factor >= 0.5 ? 0.0001 : 0.01);
 			break;
 		default:
 			printf ("ERROR: option '%c' unknown.\n",
@@ -864,6 +866,8 @@ main(int ac, char** av)
 		fprintf(zipf_debug_file, "--- Zipfian skew: %f #ranks in manifesto: %d---\n", skew_zipf_factor, NumTopRanksPerStream);
 
 		setup_top_ranks_for_zipf();
+		fprintf(zipf_debug_file, "--- Manifest complete");
+		fflush(zipf_debug_file);
 	}
 	else
 	{
