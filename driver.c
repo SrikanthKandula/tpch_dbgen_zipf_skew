@@ -772,9 +772,9 @@ void setup_top_ranks_for_zipf()
 	{
 		struct zdef curr_zdef = zdefs[zdef_ind];
 		int tnum = Seed[curr_zdef.seed].table;
-		if (table == (1 << tnum) ||
-			((table == 1 << PART_PSUPP || table == 1 << PART || table == 1 << PSUPP) && (tnum == PART || tnum == PSUPP)) ||
-			((table == 1 << ORDER_LINE || table == 1 << ORDER || table == 1 << LINE) && (tnum == ORDER || tnum == LINE)))
+		if ((table & (1 << tnum)) ||			
+			((table & (1 << PART_PSUPP) || table & (1 << PART) || table & (1 << PSUPP)) && (tnum == PART || tnum == PSUPP)) ||
+			((table & (1 << ORDER_LINE) || table & (1 << ORDER) || table & (1 << LINE)) && (tnum == ORDER || tnum == LINE)))
 		{
 			dss_setup_zipf(curr_zdef);
 		}
@@ -852,7 +852,6 @@ main(int ac, char** av)
 	/* have to do this after init */
 	tdefs[NATION].base = nations.count;
 	tdefs[REGION].base = regions.count;
-
 
 	// create the manifestos for all the seeds that will need zipf generation
 	if (skew_zipf_factor > 0)

@@ -17,10 +17,10 @@ Open `tpch.sln` in Visual Studio 2019 and build. [Tested on Windows 10.] It shou
 Identical to the datagen from [TPC-H](http://www.tpc.org/tpch/) except for one additional option `-z <f>` where the argument, a float, is the zipfian scale factor.
 
 Examples:
-* `.\Debug\dbgen.exe -T s -s 1000 -z 2`
+* `.\Debug\dbgen.exe -vf -T s -s 1000 -z 2`
 Generates the supplier.tbl for a scale factor of 1000 (i.e., 1TB) with a zipf scale factor of 2
 
-* `.\Debug\dbgen.exe -T o -s 1000 -z 1 -C 100 -S 4`
+* `.\Debug\dbgen.exe -vf -T o -s 1000 -z 1 -C 100 -S 4`
 Generates the 4th of 100 chunks with a zipf scale factor of 1 of the orders and lineitem tables
 
 * Using multiple tasks to generate different portions of a table:
