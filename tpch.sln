@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dbgen", "tpch.vcxproj", "{659CDC00-AE59-4839-B79E-93A846C8FDA2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Debug|Win32.Build.0 = Debug|Win32
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Debug|x64.ActiveCfg = Debug|x64
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Debug|x64.Build.0 = Debug|x64
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Release|Win32.ActiveCfg = Debug|Win32
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Release|Win32.Build.0 = Debug|Win32
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Release|x64.ActiveCfg = Release|x64
+		{659CDC00-AE59-4839-B79E-93A846C8FDA2}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A32B18A0-99D6-4FD2-A914-F53447745EEC}
+	EndGlobalSection
+EndGlobal
