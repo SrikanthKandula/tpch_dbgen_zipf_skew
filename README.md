@@ -13,7 +13,7 @@ We are inspired by and build on top of [prior work](https://www.microsoft.com/en
 ## 2. Build
 Open `tpch.sln` in Visual Studio 2019 and build. [Tested on Windows 10.]
 
-`make -n -f makefile.cygwin` should show a minimal set of build commands; take a look at the makefile.suite file included from TPC-H dbgen v2.18.0_rc2 for reference on how to build on other OSes and with other tools.
+`make -n -f makefile.cygwin` should show a minimal set of build commands; take a look at the `makefile.suite` file included from TPC-H dbgen v2.18.0_rc2 for reference on how to build on other OSes and with other tools.
 
 ## 3. Usage
 Identical to the datagen from [TPC-H](http://www.tpc.org/tpch/) except for one additional option `-z <f>` where the argument, a float, is the zipfian scale factor.
