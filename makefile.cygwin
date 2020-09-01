@@ -1,0 +1,12 @@
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST rnd.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST build.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST driver.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST bm_utils.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST print.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST load_stub.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST speed_seed.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST text.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST permute.c
+gcc -c -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST rng64.c
+
+gcc -g -DLINUX -DSQLSERVER -DTPCH -DRNG_TEST -O -o xyz build.o driver.o bm_utils.o rnd.o print.o load_stub.o speed_seed.o text.o permute.o rng64.o -lm
