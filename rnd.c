@@ -284,7 +284,7 @@ void dss_setup_zipf(struct zdef curr_zdef)
 
 	DSS_HUGE num_dv = nHigh - nLow + 1;
 	DSS_HUGE rank_at_which_weight_below_epsilon = (DSS_HUGE)ceil(pow(skew_zmd_epsilon, -1.0 / skew_zipf_factor));
-	DSS_HUGE numranks_dh = min(min(num_dv, numtuples), rank_at_which_weight_below_epsilon);
+	DSS_HUGE numranks_dh = MIN(MIN(num_dv, numtuples), rank_at_which_weight_below_epsilon);
 
 	if (rank_at_which_weight_below_epsilon < 0 || rank_at_which_weight_below_epsilon >(1 << 30))
 	{
@@ -293,7 +293,7 @@ void dss_setup_zipf(struct zdef curr_zdef)
 		exit(2);
 	}
 
-	if (min(num_dv, numtuples) > rank_at_which_weight_below_epsilon)
+	if (MIN(num_dv, numtuples) > rank_at_which_weight_below_epsilon)
 	{
 		fprintf(zipf_debug_file, "-- WARN: ranks only limited by epsilon; note that we only approx zipf here. #tuples= %I64d #dv= %I64d #beloweps= %I64d\n", 
 			numtuples, num_dv, rank_at_which_weight_below_epsilon);
